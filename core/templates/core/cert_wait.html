@@ -1,0 +1,52 @@
+{% extends "core/base.html" %}
+{% block title %}Распознавание — {{ file_name }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'ref_list' 'certificates' %}">Сертификаты</a> / <a href="{% url 'cert_uploads' %}">Загрузка</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>{{ file_name }}</h1>
+    <div class="sub"><a href="{% url 'cert_file' upload.pk %}" target="_blank">Открыть исходный файл</a></div>
+  </div>
+</div>
+
+<section class="panel" id="wait" data-status-url="{% url 'cert_status' upload.pk %}" data-state="{{ state }}">
+  {% if state == 'error' or state == 'interrupted' %}
+    <div class="blocking" style="margin:0 0 12px">
+      <strong>Не удалось распознать</strong>
+      <div>{{ state_text }}</div>
+    </div>
+    <div class="btn-row">
+      <form class="inline" method="post" action="{% url 'cert_rerun' upload.pk %}">{% csrf_token %}
+        <button class="btn btn-primary" type="submit">Распознать заново</button>
+      </form>
+      <a class="btn" href="{% url 'ref_create' 'certificates' %}">Ввести данные вручную</a>
+    </div>
+  {% else %}
+    <div class="spinner-row"><span class="spinner"></span> <b id="wait-text">{{ state_text }}</b></div>
+    <p class="hint">Страница обновится сама, когда всё будет готово. Её можно закрыть — результат сохранится в списке загрузок.</p>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+  var box = document.getElementById('wait');
+  var st = box.getAttribute('data-state');
+  if (st !== 'queued' && st !== 'processing') return;
+  var text = document.getElementById('wait-text');
+  function poll() {
+    fetch(box.getAttribute('data-status-url'), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        if (s.state === 'queued' || s.state === 'processing') {
+          text.textContent = s.text;
+          setTimeout(poll, 1500);
+        } else {
+          location.reload();
+        }
+      })
+      .catch(function () { setTimeout(poll, 3000); });
+  }
+  setTimeout(poll, 1000);
+})();
+</script>
+{% endblock %}

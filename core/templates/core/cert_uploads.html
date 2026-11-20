@@ -1,0 +1,113 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Загрузка сертификатов{% endblock %}
+{% block content %}
+<div class="crumbs">
+  {% if site %}<a href="{% url 'site_overview' site.pk %}">{{ site.name }}</a> / <a href="{% url 'site_certificates' site.pk %}">Сертификаты объекта</a> /{% else %}<a href="{% url 'ref_list' 'certificates' %}">Сертификаты</a> /{% endif %}
+</div>
+<div class="page-head">
+  <div>
+    <h1>Загрузка сертификатов, деклараций и отказных писем{% if site %} — {{ site.name }}{% endif %}</h1>
+    <div class="sub">PDF или фото/скан. В одном файле может быть несколько документов — программа разделит их сама.</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'ref_create' 'certificates' %}">Ввести вручную</a>
+    {% if site %}<a class="btn" href="{% url 'site_certificates' site.pk %}">К сертификатам объекта</a>{% endif %}
+  </div>
+</div>
+
+{% if site %}
+<div class="hint" style="margin-bottom:12px">Загрузка в пространстве объекта «{{ site.name }}» — происхождение документов будет записано за ним.</div>
+{% endif %}
+{% if material %}
+<div class="notice">Документы загружаются для материала «{{ material.name }}» — он будет отмечен в каждом найденном документе.</div>
+{% endif %}
+{% if not ocr_ok %}
+<div class="warnings">
+  <strong>Распознавание сканов недоступно</strong>
+  {{ ocr_message }} Файлы с текстовым слоем всё равно разберутся, а сканы придётся заполнить вручную на странице проверки.
+</div>
+{% endif %}
+
+<details class="panel"{% if registry_number or candidate_result.state %} open{% endif %}>
+  <summary class="panel-head" style="cursor:pointer">
+    <span class="section-title">Загрузить по номеру из Росаккредитации</span>
+    <span class="hint">Без скана</span>
+  </summary>
+  <form method="post" class="upload-form" style="margin-top:12px">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="registry_number">
+    {% if material %}<input type="hidden" name="material" value="{{ material.pk }}">{% endif %}
+    {% if site %}<input type="hidden" name="site" value="{{ site.pk }}">{% endif %}
+    <input type="text" name="registry_number" value="{{ registry_number }}" required placeholder="Например, РОСС RU С-RU.АЩ01.В.00760/25" style="flex:1 1 340px">
+    <button class="btn btn-primary" type="submit">Загрузить и сохранить</button>
+    <span class="hint">{% help_pop "cert.upload_registry" %}</span>
+  </form>
+</details>
+
+{% if candidate_result.state == 'candidates' %}
+<section class="panel">
+  <div class="panel-head"><h2>Выберите документ из официального реестра</h2></div>
+  <p class="hint">Точного совпадения по номеру нет. По числовому фрагменту найдены похожие документы — сохранён будет только выбранный вами.</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="registry_choose">
+    <input type="hidden" name="registry_number" value="{{ registry_number }}">
+    {% if material %}<input type="hidden" name="material" value="{{ material.pk }}">{% endif %}
+    {% if site %}<input type="hidden" name="site" value="{{ site.pk }}">{% endif %}
+    {% for c in candidate_result.candidates %}
+    <label style="display:block; margin-bottom:12px">
+      <input type="radio" name="registry_choice" value="{{ forloop.counter0 }}" required>
+      <b>{{ c.number }}</b> · {{ c.source_label|default:"ФГИС Росаккредитации" }} · {{ c.status_text }}
+      <div class="hint">{{ c.issue_date }}{% if c.expiry_date %} — {{ c.expiry_date }}{% endif %}{% if c.product %} · {{ c.product }}{% endif %}</div>
+    </label>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Загрузить выбранный документ</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Распознать файл</h2>
+    {% help_pop "cert.recognize" %}
+  </div>
+  <form method="post" enctype="multipart/form-data" class="upload-form">
+    {% csrf_token %}
+    {% if material %}<input type="hidden" name="material" value="{{ material.pk }}">{% endif %}
+    {% if site %}<input type="hidden" name="site" value="{{ site.pk }}">{% endif %}
+    <input type="file" name="files" multiple accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" required>
+    <button class="btn btn-primary" type="submit">Загрузить и распознать</button>
+    <span class="hint">до {{ max_mb }} МБ на файл · 10–40 секунд на документ</span>
+  </form>
+</section>
+
+<form method="get" class="toolbar">
+  {% if material %}<input type="hidden" name="material" value="{{ material.pk }}">{% endif %}
+  <input type="search" name="q" value="{{ q }}" placeholder="Поиск по имени файла">
+  <button class="btn" type="submit">Найти</button>
+  {% if q %}<a href="{% if site %}{% url 'site_cert_uploads' site.pk %}{% else %}{% url 'cert_uploads' %}{% endif %}{% if material %}?material={{ material.pk }}{% endif %}">Сбросить</a>{% endif %}
+</form>
+
+<div class="rows-wrap">
+<table class="list js-sort">
+  <thead><tr><th>Загружен</th><th>Файл</th><th>Статус</th><th>Документов найдено</th><th>Сохранено</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="num">{{ r.upload.created_at|date:"d.m.Y H:i" }}</td>
+      <td><a href="{% url 'cert_review' r.upload.pk %}">{{ r.name }}</a></td>
+      <td>
+        {% if r.state == 'done' %}{% if r.found and r.saved == r.found %}<span class="status status-ACCEPTED">всё сохранено</span>{% else %}<span class="status status-PENDING">ждёт проверки</span>{% endif %}
+        {% elif r.state == 'error' or r.state == 'interrupted' %}<span class="status status-REJECTED">ошибка</span>
+        {% else %}<span class="status">{{ r.upload.get_status_display }}</span>{% endif %}
+      </td>
+      <td>{% if r.state == 'done' %}{{ r.found }}{% endif %}</td>
+      <td>{% if r.state == 'done' %}{{ r.saved }}{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5" class="empty">Пока ничего не загружали.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

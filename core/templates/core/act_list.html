@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% block title %}Акты ОСР{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Акты освидетельствования скрытых работ{% if locked_site %} — {{ locked_site.name }}{% endif %}</h1>
+    <div class="sub">{% if locked_site %}Объект: {{ locked_site.name }} · {% endif %}Всего: {{ page.paginator.count }}</div>
+  </div>
+  <div class="btn-row">
+    {% if locked_site %}<a class="btn" href="{% url 'site_overview' locked_site.pk %}">Обзор объекта</a>{% endif %}
+    <a class="btn btn-primary" href="{% if locked_site %}{% url 'site_act_create' locked_site.pk %}{% else %}{% url 'act_create' %}{% endif %}">Новый акт</a>
+    {% if locked_site %}<a class="btn" href="{% url 'site_act_from_volumes' locked_site.pk %}">Создать акт из замеров</a>{% endif %}
+  </div>
+</div>
+
+<form method="get" class="toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Номер, раздел, работа или материал">
+  {% if locked_site %}
+  <span class="hint">Объект: {{ locked_site.name }}</span>
+  {% else %}
+  <select name="site">
+    <option value="">Все объекты</option>
+    {% for s in sites %}<option value="{{ s.pk }}" {% if current_site and s.pk == current_site.pk %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <select name="status">
+    <option value="">Все статусы</option>
+    {% for value, label in statuses %}<option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">Найти</button>
+  {% if q or status %}<a href="{% if locked_site %}{% url 'site_acts' locked_site.pk %}{% else %}{% url 'act_list' %}{% endif %}">Сбросить</a>{% endif %}
+</form>
+
+<div class="rows-wrap">
+<table class="list">
+  <thead>
+    <tr>{% for h in headers %}<th><a class="sort" href="{{ h.url }}">{{ h.label }}{% if h.arrow %} <span class="sort-arrow">{{ h.arrow }}</span>{% endif %}</a></th>{% endfor %}<th></th></tr>
+  </thead>
+  <tbody>
+    {% for act in page %}
+    <tr>
+      <td class="num"><a href="{% url 'act_edit' act.pk %}">{{ act.act_number }}</a></td>
+      <td class="num">{{ act.drawn_up_date|date:"d.m.Y" }}</td>
+      <td>{{ act.section.name }}</td>
+      <td>{{ act.section.site.name }}</td>
+      <td><span class="status status-{{ act.status }}">{{ act.get_status_display }}</span></td>
+      <td class="num"><a href="{% url 'act_excel' act.pk %}">Excel</a> · <a href="{% url 'act_final_pdf' act.pk %}" data-pdf-download>PDF</a>{% if act.corrected_file %} · <a href="{% url 'act_corrected_file' act.pk %}" title="Исправленный вручную файл">Исправленный</a>{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" class="empty">Актов пока нет. Нажмите «Новый акт».</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if page.has_other_pages %}
+<div class="pager">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&{{ qs }}">← Назад</a>{% endif %}
+  <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}&{{ qs }}">Дальше →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

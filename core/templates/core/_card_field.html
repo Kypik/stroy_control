@@ -1,0 +1,6 @@
+<div class="field{% if field.field.required %} required{% endif %}{% if field.errors and field.form.save_it.value and not field.form.quiet %} has-error{% endif %}{% if wide or field.widget_type == 'textarea' %} wide{% endif %}{% if warn and warn != 'high' %} warn{% endif %}">
+  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {% include "core/_related_field.html" with field=field %}
+  {% if warn and warn != 'high' %}<div class="help">Прочитано неуверенно — сверьте со сканом</div>{% endif %}
+  {% if field.form.save_it.value and not field.form.quiet %}{{ field.errors }}{% endif %}
+</div>

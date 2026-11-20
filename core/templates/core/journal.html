@@ -1,0 +1,58 @@
+{% extends "core/base.html" %}
+{% block title %}Журнал входного контроля{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Журнал входного контроля — {{ site.name }}</h1>
+    <div class="sub">Собирается сам из накладных этого объекта, сертификатов и записей контроля — вручную не ведётся.</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'site_overview' site.pk %}">Обзор объекта</a>
+    <a class="btn btn-primary" href="?{{ request.GET.urlencode }}&export=xlsx">Выгрузить в Excel</a>
+  </div>
+</div>
+
+<form method="get" class="toolbar">
+  <span class="hint">Объект: {{ site.name }}</span>
+  <label class="hint">с <input type="text" class="date-input" name="from" value="{{ date_from }}" placeholder="дд.мм.гггг"></label>
+  <label class="hint">по <input type="text" class="date-input" name="to" value="{{ date_to }}" placeholder="дд.мм.гггг"></label>
+  <input type="search" name="q" value="{{ q }}" placeholder="Материал, накладная, поставщик, документ">
+  <select name="supplier">
+    <option value="">Все поставщики</option>
+    {% for s in suppliers %}<option value="{{ s.pk }}" {% if s.pk|stringformat:"i" == supplier %}selected{% endif %}>{{ s.short_name }}</option>{% endfor %}
+  </select>
+  <label class="hint"><input type="checkbox" name="problems" value="1"{% if only_problems %} checked{% endif %}> только с проблемами</label>
+  <button class="btn" type="submit">Показать</button>
+  <a class="hint" href="{% url 'ref_create' 'inspections' %}">+ запись контроля</a>
+</form>
+
+{% if site %}
+<form method="post" action="{% url 'journal_import' %}" enctype="multipart/form-data" class="toolbar">
+  {% csrf_token %}
+  <input type="hidden" name="site" value="{{ site.pk }}">
+  <input type="file" name="file" accept=".xlsx" required>
+  <button class="btn" type="submit">Импорт из Excel</button>
+  <span class="hint">Колонки как в журнале: дата поставки, наименование материалов, ед. изм., кол-во, поставщик, сопроводительный документ, вид контроля, результат, подпись.</span>
+</form>
+{% endif %}
+
+{% if problems %}<div class="warnings">Строк без материала или без действующего документа о качестве: {{ problems }} (выделены красным).</div>{% endif %}
+
+<div class="rows-wrap">
+<table class="list js-sort" data-renumber>
+  <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr{% if r.problem %} class="row-problem"{% endif %}>
+    <td>{{ r.n }}</td><td class="num">{{ r.date|date:"d.m.Y" }}</td><td>{{ r.material }}</td>
+    <td>{{ r.unit }}</td><td class="num">{{ r.qty }}</td><td>{{ r.supplier }}</td>
+    <td>{{ r.certificate }}</td><td>{{ r.control_type }}</td><td>{{ r.result }}</td>
+    <td>{{ r.inspector }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="{{ columns|length }}" class="empty">За выбранный период поставок нет.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

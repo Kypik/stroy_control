@@ -1,0 +1,4 @@
+{% if field.field.create_url %}
+<a class="related-create" href="{{ field.field.create_url }}?popup=1" data-popup target="_blank" rel="noopener" title="Создать: {{ field.field.create_label }}">+ создать</a>
+{% endif %}
+{{ field }}

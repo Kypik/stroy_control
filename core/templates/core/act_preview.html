@@ -1,0 +1,98 @@
+{% comment %}Документ акта для живого предпросмотра. Данные — те же сборщики, что у генерации Excel.
+Блоки .pv-block с data-target ведут к секциям формы (обработчик в act_edit.html).{% endcomment %}
+<div class="doc">
+  <div class="pv-block" data-target="panel-req">
+    <div class="doc-row"><span class="doc-label">Объект капитального строительства</span>
+      <span class="doc-val">{% if header.object_name or header.object_address %}{{ header.object_name }}{% if header.object_address %}, {{ header.object_address }}{% endif %}{% else %}<span class="pv-missing">— не заполнено</span>{% endif %}</span></div>
+    <div class="doc-hint">(наименование проектной документации, почтовый или строительный адрес объекта капитального строительства)</div>
+
+    <div class="doc-row doc-label">Застройщик (технический заказчик, эксплуатирующая организация или региональный оператор)</div>
+    <div class="doc-row"><span class="doc-val">{{ customer_line }}</span></div>
+    {% if header.customer_address %}<div class="doc-row"><span class="doc-val">{{ header.customer_address }}</span></div>{% endif %}
+
+    <div class="doc-row doc-label">Лицо, осуществляющее строительство</div>
+    <div class="doc-row"><span class="doc-val">{{ contractor_line }}</span></div>
+    {% if header.contractor_address %}<div class="doc-row"><span class="doc-val">{{ header.contractor_address }}</span></div>{% endif %}
+    {% if contractor_sro %}<div class="doc-row"><span class="doc-val">{{ contractor_sro }}</span></div>{% endif %}
+
+    <div class="doc-row doc-label">Лицо, осуществляющее подготовку проектной документации</div>
+    <div class="doc-row"><span class="doc-val">{{ designer_line }}</span></div>
+    {% if header.designer_address %}<div class="doc-row"><span class="doc-val">{{ header.designer_address }}</span></div>{% endif %}
+    {% if designer_sro %}<div class="doc-row"><span class="doc-val">{{ designer_sro }}</span></div>{% endif %}
+  </div>
+
+  <div class="pv-block" data-target="panel-req">
+    <div class="doc-title">АКТ</div>
+    <div class="doc-subtitle">освидетельствования скрытых работ</div>
+    <div class="doc-row">№ <span class="doc-val">{% if act.act_number %}{{ act.act_number }}{% else %}<span class="pv-missing">—</span>{% endif %}</span>
+      от <span class="doc-val">{% if act.drawn_up_date %}{{ act.drawn_up_date|date:"d.m.Y" }}{% else %}<span class="pv-missing">—</span>{% endif %}</span></div>
+  </div>
+
+  <div class="pv-block" data-target="panel-sig">
+    {% for s in signer_blocks %}
+    <div class="doc-signer">
+      <div class="doc-hint">{{ s.label }}</div>
+      <div class="doc-row"><span class="doc-val">{{ s.line1 }}</span></div>
+      {% if s.line2 %}<div class="doc-row"><span class="doc-val">{{ s.line2 }}</span></div>{% endif %}
+    </div>
+    {% empty %}
+    <span class="pv-missing">Подписанты не указаны</span>
+    {% endfor %}
+  </div>
+
+  <div class="pv-block" data-target="panel-vol">
+    <div class="doc-row">произвели осмотр работ, выполненных <span class="doc-val">{{ header.contractor_name }}</span> и составили настоящий акт о нижеследующем</div>
+    <div class="doc-row doc-label">1. К освидетельствованию предъявлены следующие работы:</div>
+    <div class="doc-row"><span class="doc-val">{% if act.work_description %}{{ act.work_description }}{% else %}<span class="pv-missing">— нет замеров</span>{% endif %}</span></div>
+    <div class="doc-hint">(наименование скрытых работ)</div>
+  </div>
+
+  <div class="pv-block" data-target="panel-req">
+    <div class="doc-row doc-label">2. Работы выполнены по проектной документации</div>
+    <div class="doc-row"><span class="doc-val">{{ header.designer_name }}</span></div>
+    <div class="doc-row"><span class="doc-val">{% if header.design_doc_reference %}{{ header.design_doc_reference }}{% else %}<span class="pv-missing">— не заполнено</span>{% endif %}</span></div>
+    <div class="doc-hint">(номер, другие реквизиты чертежа, наименование проектной и/или рабочей документации)</div>
+  </div>
+
+  <div class="pv-block" data-target="panel-mat">
+    <div class="doc-row doc-label">3. При выполнении работ применены</div>
+    {% if materials_in_registry %}
+    <div class="doc-row"><span class="doc-val">{{ material_names|join:"; " }}.</span></div>
+    <div class="doc-row"><span class="doc-val">{{ registry_note }}</span></div>
+    {% elif materials_in_appendix %}
+    <div class="doc-row"><span class="doc-val">{{ appendix_note }}</span></div>
+    {% else %}
+      {% for text in material_texts %}<div class="doc-row"><span class="doc-val">{{ text }}</span></div>{% empty %}<span class="pv-missing">— материалы не выбраны</span>{% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="pv-block" data-target="panel-att">
+    <div class="doc-row doc-label">4. Предъявлены документы, подтверждающие соответствие работ предъявляемым к ним требованиям</div>
+    {% if schemes %}<div class="doc-row"><span class="doc-val">{{ schemes|join:"; " }}</span></div>{% endif %}
+  </div>
+
+  <div class="pv-block" data-target="panel-vol">
+    <div class="doc-row doc-label">5. Даты: начала работ <span class="doc-val">{% if act.work_start_date %}{{ act.work_start_date|date:"d.m.Y" }}{% else %}<span class="pv-missing">—</span>{% endif %}</span>,
+      окончания <span class="doc-val">{% if act.work_end_date %}{{ act.work_end_date|date:"d.m.Y" }}{% else %}<span class="pv-missing">—</span>{% endif %}</span></div>
+    <div class="doc-row doc-label">6. Работы выполнены в соответствии с</div>
+    <div class="doc-row"><span class="doc-val">{% if act.standards_text %}{{ act.standards_text }}{% else %}<span class="pv-missing">— не указаны нормативы</span>{% endif %}</span></div>
+    <div class="doc-row doc-label">7. Разрешается производство последующих работ</div>
+    <div class="doc-row"><span class="doc-val">{% if act.next_work_text %}{{ act.next_work_text }}{% else %}<span class="pv-missing">— не заполнено</span>{% endif %}</span></div>
+    <div class="doc-row">Дополнительные сведения <span class="doc-val">-</span></div>
+    <div class="doc-row">Акт составлен в <span class="doc-val">{{ copies }}</span> экземплярах.</div>
+  </div>
+
+  <div class="pv-block" data-target="panel-att">
+    <div class="doc-row doc-label">Приложения:</div>
+    {% for text in attachment_texts %}<div class="doc-row">{{ forloop.counter }}. <span class="doc-val">{{ text }}</span></div>{% empty %}<span class="pv-missing">— нет</span>{% endfor %}
+  </div>
+
+  <div class="pv-block" data-target="panel-sig">
+    {% for s in signer_blocks %}
+    <div class="doc-sign">
+      <div class="doc-hint">{{ s.label }}</div>
+      <span class="doc-val">{{ s.name }}</span> <span class="doc-hint">/ подпись /</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>

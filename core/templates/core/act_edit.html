@@ -1,0 +1,416 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Акт №{{ act.act_number }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_acts' act.section.site.pk %}">Акты объекта «{{ act.section.site.name }}»</a> /</div>
+<div class="page-head act-head">
+  <div>
+    <h1>Акт №{{ act.act_number }} <span class="status status-{{ act.status }}" aria-live="polite">{{ act.get_status_display }}</span></h1>
+    <div class="sub"><a href="{% url 'site_overview' act.section.site.pk %}">{{ act.section.site.name }}</a> · раздел «{{ act.section.name }}» · от {{ act.drawn_up_date|date:"d.m.Y" }}</div>
+  </div>
+  <div class="btn-row">
+    {% for t in transitions %}
+    <button class="btn{% if t.primary %} btn-primary{% endif %}{% if t.danger %} btn-danger{% endif %}" type="submit"
+            form="act-form" name="transition" value="{{ t.value }}"
+            {% if warning_items %}data-confirm="В акте {{ warning_items|length }} замечаний. Продолжить?"{% endif %}>{{ t.label }}</button>
+    {% endfor %}
+    <a class="btn" href="{% url 'act_excel' act.pk %}">Скачать Excel</a>
+    <a class="btn" href="{% url 'act_final_pdf' act.pk %}" data-pdf-download>Итоговый PDF</a>
+    <details class="more-actions">
+      <summary class="btn">Ещё</summary>
+      <div class="more-actions-body">
+        <form class="inline" method="post" action="{% url 'act_registry' act.pk %}">{% csrf_token %}
+          <button class="btn" type="submit">Сформировать реестр к АОСР</button>
+        </form>
+        <form class="inline" method="post" action="{% url 'act_copy' act.pk %}">{% csrf_token %}
+          <button class="btn" type="submit" title="Новый акт с теми же подписантами и приложениями">Создать на основе</button>
+        </form>
+        <a class="btn btn-danger" href="{% url 'act_delete' act.pk %}">Удалить акт</a>
+      </div>
+    </details>
+  </div>
+</div>
+
+{% if warning_items %}
+<section class="warnings" id="act-warnings" aria-labelledby="warnings-title">
+  <strong id="warnings-title">Замечания: {{ warning_items|length }}</strong>
+  <ul>
+    {% for w in warning_items|slice:":5" %}
+    <li><a href="#{{ w.section }}" data-warning-section="{{ w.section }}"{% if w.pk %} data-warning-pk="{{ w.pk }}"{% endif %}{% if w.field %} data-warning-field="{{ w.field }}"{% endif %}>{{ w.text }}</a></li>
+    {% endfor %}
+  </ul>
+  {% if warning_items|length > 5 %}
+  <details class="warnings-more">
+    <summary>Показать все замечания ({{ warning_items|length }})</summary>
+    <ul>
+      {% for w in warning_items|slice:"5:" %}
+      <li><a href="#{{ w.section }}" data-warning-section="{{ w.section }}"{% if w.pk %} data-warning-pk="{{ w.pk }}"{% endif %}{% if w.field %} data-warning-field="{{ w.field }}"{% endif %}>{{ w.text }}</a></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+  <div class="hint">Черновик можно сохранить и сформировать в Excel как есть. {% help_pop "act.excel" %}</div>
+</section>
+{% else %}
+<p class="all-good-line">Замечаний нет — акт заполнен полностью.</p>
+{% endif %}
+
+<details class="panel corrected-panel"{% if corrected_name %} open{% endif %}>
+  <summary style="cursor:pointer;font-weight:600;font-size:15px">
+    Исправленный файл{% if corrected_name %} — прикреплён{% else %} (необязательно){% endif %}
+  </summary>
+  <div style="margin-top:12px">
+    {% if corrected_name %}
+    <p style="margin-top:0">
+      Прикреплён: <a href="{% url 'act_corrected_file' act.pk %}">{{ corrected_name }}</a>
+    </p>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'act_corrected' act.pk %}" class="toolbar" style="margin-bottom:0">
+      {% csrf_token %}
+      <input type="file" name="file" accept=".xlsx,.xls,.pdf,.doc,.docx,.jpg,.jpeg,.png"{% if not corrected_name %} required{% endif %}>
+      <button class="btn btn-primary" type="submit">{% if corrected_name %}Заменить{% else %}Прикрепить{% endif %}</button>
+      {% if corrected_name %}
+      <button class="btn btn-danger" type="submit" name="action" value="remove">Убрать</button>
+      {% endif %}
+      <span class="hint">Исправленный вручную акт — для истории. {% help_pop "act.corrected" %}</span>
+    </form>
+  </div>
+</details>
+
+<div class="act-layout">
+<form method="post" id="act-form" data-dirty-guard data-options-url="{% url 'act_options' act.pk %}" novalidate>
+  {% csrf_token %}
+
+  <nav class="act-nav" aria-label="Разделы акта">
+    <a href="#panel-req">Основное</a>
+    <a href="#panel-vol">Работы{% if warning_counts.vol %} <span class="badge badge-warn">{{ warning_counts.vol }}</span>{% endif %}</a>
+    <a href="#panel-mat">Материалы{% if warning_counts.mat %} <span class="badge badge-warn">{{ warning_counts.mat }}</span>{% endif %}</a>
+    <a href="#panel-sig">Подписанты{% if warning_counts.sig %} <span class="badge badge-warn">{{ warning_counts.sig }}</span>{% endif %}</a>
+    <a href="#panel-att">Приложения{% if warning_counts.att %} <span class="badge badge-warn">{{ warning_counts.att }}</span>{% endif %}</a>
+    <a href="#panel-docs">Документы{% if warning_counts.docs %} <span class="badge badge-warn">{{ warning_counts.docs }}</span>{% endif %}</a>
+    <a href="#act-header">Шапка</a>
+  </nav>
+
+  <details class="panel act-section" id="panel-req" open>
+    <summary class="panel-head">
+      <span class="section-title"><span class="section-num">1.</span> Основное</span>
+      <span class="section-meta">
+        {% if warning_counts.req %}<span class="badge badge-warn">{{ warning_counts.req }}</span>{% endif %}
+        {% if form.errors %}<span class="badge badge-err">ошибки</span>{% endif %}
+      </span>
+    </summary>
+    <div class="section-body">
+      {% include "core/_act_main_fields.html" %}
+    </div>
+  </details>
+
+  <details class="panel act-section" id="panel-vol" open>
+    <summary class="panel-head">
+      <span class="section-title"><span class="section-num">2.</span> Выполненные работы (замеры)</span>
+      <span class="section-meta">
+        {% if warning_counts.vol %}<span class="badge badge-warn">{{ warning_counts.vol }}</span>{% endif %}
+        {% if volumes.total_error_count %}<span class="badge badge-err">ошибки</span>{% endif %}
+        <span class="count">{{ volumes.initial_form_count }}</span>
+      </span>
+    </summary>
+    <div class="section-body">
+      <p class="hint" style="margin-top:0">Из строк собираются описание работ и даты. {% help_pop "act.volumes" %}</p>
+      {% include "core/_formset.html" with fs=volumes delete_label="Убрать из акта" %}
+
+      {% if free_volumes %}
+      <details class="free-volumes">
+        <summary>Свободные замеры по разделу <span class="count">{{ free_volumes|length }}</span></summary>
+        <p class="hint" style="margin-top:0">Отметьте, чтобы включить в акт. {% help_pop "act.free_volumes" %}</p>
+        <table class="rows">
+          <thead><tr><th></th><th>Начало</th><th>Окончание</th><th>Вид работ</th><th>Место выполнения</th><th>Объём</th></tr></thead>
+          <tbody>
+          {% for v in free_volumes %}
+            <tr>
+              <td class="pick"><input type="checkbox" name="attach_volumes" value="{{ v.pk }}"></td>
+              <td>{{ v.performance_date|date:"d.m.Y" }}</td>
+              <td>{{ v.end_date|date:"d.m.Y" }}</td>
+              <td>{{ v.work_type.name }}</td>
+              <td>{{ v.location }}</td>
+              <td>{{ v.actual_volume }} {{ v.unit }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </details>
+      {% endif %}
+    </div>
+  </details>
+
+  <details class="panel act-section" id="panel-mat" open>
+    <summary class="panel-head">
+      <span class="section-title"><span class="section-num">3.</span> Материалы</span>
+      <span class="section-meta">
+        {% if warning_counts.mat %}<span class="badge badge-warn">{{ warning_counts.mat }}</span>{% endif %}
+        {% if materials.total_error_count %}<span class="badge badge-err">ошибки</span>{% endif %}
+        <span class="count">{{ materials.initial_form_count }}</span>
+        <a class="hint" href="{% url 'ref_create' 'materials' %}?popup=1" data-popup target="_blank" rel="noopener">+ материал</a>
+        <a class="hint" href="{% url 'ref_create' 'deliveries' %}?popup=1" data-popup target="_blank" rel="noopener">+ накладная</a>
+      </span>
+    </summary>
+    <div class="section-body">
+      <p class="hint" style="margin-top:0">В строке укажите позицию поставки или материал без накладной. {% help_pop "act.materials" %}</p>
+      {% include "core/_formset.html" with fs=materials delete_label="Убрать из акта" %}
+      <button type="button" class="btn btn-primary row-add" id="mp-open" data-url="{% url 'act_material_picker' act.pk %}">Выбрать материалы…</button>
+
+      <div class="picker" id="material-picker" hidden>
+        <div class="picker-head">
+          <input type="search" id="mp-search" placeholder="Поиск материала">
+          <label class="picker-opt"><input type="checkbox" id="mp-hide-in-act" checked> скрыть уже добавленные</label>
+          <button type="button" class="btn" id="mp-expand">Развернуть все</button>
+          <button type="button" class="btn" id="mp-collapse">Свернуть все</button>
+          {% help_pop "act.picker" %}
+        </div>
+        <div id="mp-content"><p class="hint">Загрузка…</p></div>
+        <div class="picker-foot">
+          <span>Выбрано: <b id="mp-count">0</b></span>
+          <button type="button" class="btn btn-primary" id="mp-add" disabled>Добавить в акт</button>
+          <button type="button" class="btn" id="mp-close">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel act-section" id="panel-sig"{% if warning_counts.sig or signers.total_error_count %} open{% endif %}>
+    <summary class="panel-head">
+      <span class="section-title"><span class="section-num">4.</span> Подписанты</span>
+      <span class="section-meta">
+        {% if warning_counts.sig %}<span class="badge badge-warn">{{ warning_counts.sig }}</span>{% endif %}
+        {% if signers.total_error_count %}<span class="badge badge-err">ошибки</span>{% endif %}
+        <span class="count">{{ signers.initial_form_count }}</span>
+        <a class="hint" href="{% url 'ref_create' 'persons' %}?popup=1" data-popup target="_blank" rel="noopener">+ участник</a>
+      </span>
+    </summary>
+    <div class="section-body">
+      <p class="hint" style="margin-top:0">Одна роль — один человек. {% help_pop "act.signers" %}</p>
+      {% include "core/_formset.html" with fs=signers delete_label="Убрать из акта" %}
+    </div>
+  </details>
+
+  <details class="panel act-section" id="panel-att"{% if warning_counts.att or attachments.total_error_count %} open{% endif %}>
+    <summary class="panel-head">
+      <span class="section-title"><span class="section-num">5.</span> Приложения</span>
+      <span class="section-meta">
+        {% if warning_counts.att %}<span class="badge badge-warn">{{ warning_counts.att }}</span>{% endif %}
+        {% if attachments.total_error_count %}<span class="badge badge-err">ошибки</span>{% endif %}
+        <span class="count">{{ attachments.initial_form_count }}</span>
+        <a class="hint" href="{% url 'ref_create' 'documents' %}?popup=1" data-popup target="_blank" rel="noopener">+ документ</a>
+      </span>
+    </summary>
+    <div class="section-body">
+      <p class="hint" style="margin-top:0">Исполнительные схемы, протоколы и т.п. {% help_pop "act.attachments" %}</p>
+      {% include "core/_formset.html" with fs=attachments delete_label="Убрать из акта" %}
+    </div>
+  </details>
+
+  <details class="panel act-section" id="panel-docs"{% if form.protocols.errors or warning_counts.docs %} open{% endif %}>
+    <summary class="panel-head">
+      <span class="section-title"><span class="section-num">6.</span> Документы и реестр</span>
+      <span class="section-meta">
+        {% if warning_counts.docs %}<span class="badge badge-warn">{{ warning_counts.docs }}</span>{% endif %}
+      </span>
+    </summary>
+    <div class="section-body">
+      <div class="fields">
+        {% include "core/_field.html" with field=form.protocols %}
+      </div>
+      <p class="hint" style="margin-bottom:0">Реестр к АОСР формируется автоматически. {% help_pop "act.docs" %}</p>
+    </div>
+  </details>
+
+  {% include "core/_act_header.html" %}
+
+  <div class="sticky-actions">
+    <span class="dirty-indicator" id="dirty-indicator" aria-live="polite">Все изменения сохранены</span>
+    {% for t in transitions %}
+    <button class="btn{% if t.primary %} btn-primary{% endif %}{% if t.danger %} btn-danger{% endif %}" type="submit"
+            name="transition" value="{{ t.value }}"
+            {% if warning_items %}data-confirm="В акте {{ warning_items|length }} замечаний. Продолжить?"{% endif %}>{{ t.label }}</button>
+    {% endfor %}
+    <button class="btn" type="submit">Сохранить</button>
+    <button class="btn" type="submit" name="action" value="excel">Сохранить и скачать Excel</button>
+    <button type="button" class="btn preview-toggle" id="pv-toggle">Предпросмотр</button>
+    <a class="btn" href="{% url 'site_acts' act.section.site.pk %}">К списку актов</a>
+  </div>
+</form>
+
+<aside class="act-preview" id="act-preview" aria-label="Предпросмотр акта">
+  <div class="pv-title">Предпросмотр акта
+    <button type="button" class="btn pv-close" id="pv-close" aria-label="Закрыть предпросмотр">Закрыть</button>
+  </div>
+  <div class="pv-hint">Обновляется автоматически, ничего не сохраняет. {% help_pop "act.preview" %}</div>
+  <div id="pv-doc" data-url="{% url 'act_preview' act.pk %}">Загрузка…</div>
+</aside>
+</div>
+<script>
+(function () {
+  var form = document.querySelector('form[data-options-url]');
+  var preview = document.getElementById('act-preview');
+  var host = document.getElementById('pv-doc');
+  if (!form || !preview || !host) return;
+  var url = host.getAttribute('data-url');
+  var timer = null, controller = null;
+
+  function refresh() {
+    if (controller) controller.abort();
+    controller = new AbortController();
+    host.style.opacity = '0.5';
+    // FormData включает и csrfmiddlewaretoken — серверу хватает тела формы
+    fetch(url, {
+      method: 'POST', body: new FormData(form), credentials: 'same-origin',
+      signal: controller.signal,
+    })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (html) { host.innerHTML = html; host.style.opacity = '1'; })
+      .catch(function (e) {
+        host.style.opacity = '1';
+        if (e.name !== 'AbortError') host.textContent = 'Не удалось обновить предпросмотр.';
+      });
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 700);   // не дёргаем сервер на каждую букву
+  }
+
+  form.addEventListener('input', schedule);
+  form.addEventListener('change', schedule);
+  // добавление/удаление строк и пометка × — без событий формы, следим за DOM
+  document.querySelectorAll('table[data-formset] tbody').forEach(function (tbody) {
+    new MutationObserver(schedule).observe(tbody, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'],
+    });
+  });
+
+  // клик по блоку документа — к секции формы, фокус на первом незаполненном поле
+  preview.addEventListener('click', function (e) {
+    var block = e.target.closest('.pv-block');
+    if (!block) return;
+    var panel = document.getElementById(block.getAttribute('data-target'));
+    if (!panel) return;
+    if (panel.tagName === 'DETAILS') panel.open = true;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var fields = panel.querySelectorAll('select, input:not([type=hidden]):not([type=checkbox])');
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      if (!f.value && !f.disabled && f.offsetParent !== null) { f.focus(); break; }
+    }
+  });
+
+  var toggle = document.getElementById('pv-toggle');
+  if (toggle) toggle.addEventListener('click', function () { preview.classList.toggle('pv-open'); });
+  var close = document.getElementById('pv-close');
+  if (close) close.addEventListener('click', function () { preview.classList.remove('pv-open'); });
+
+  refresh();
+})();
+</script>
+<script>
+(function () {
+  var picker = document.getElementById('material-picker');
+  var content = document.getElementById('mp-content');
+  var openBtn = document.getElementById('mp-open');
+  var search = document.getElementById('mp-search');
+  var countEl = document.getElementById('mp-count');
+  var addBtn = document.getElementById('mp-add');
+  var hideBox = document.getElementById('mp-hide-in-act');
+
+  function checked() { return content.querySelectorAll('input[type=checkbox]:checked'); }
+  function updateCount() {
+    var n = checked().length;
+    countEl.textContent = n;
+    addBtn.disabled = n === 0;
+    addBtn.textContent = n ? 'Добавить в акт (' + n + ')' : 'Добавить в акт';
+  }
+
+  function load() {
+    content.innerHTML = '<p class="hint">Загрузка…</p>';
+    fetch(openBtn.getAttribute('data-url'), { credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) { content.innerHTML = html; filter(); updateCount(); });
+  }
+
+  function filter() {
+    var q = search.value.trim().toLowerCase();
+    var hideInAct = hideBox ? hideBox.checked : false;
+    var any = false;
+    content.querySelectorAll('.mp-group').forEach(function (g) {
+      var visible = 0;
+      g.querySelectorAll('.mp-item').forEach(function (li) {
+        var hay = li.getAttribute('data-search') || li.getAttribute('data-name') || '';
+        var show = (!q || hay.indexOf(q) !== -1)
+          && !(hideInAct && li.getAttribute('data-in-act') === '1');
+        li.hidden = !show;
+        if (show) visible++;
+      });
+      g.hidden = visible === 0;
+      g.open = Boolean(q) && visible > 0;   // без поиска всё свёрнуто, при поиске раскрыто то, где нашлось
+      if (visible) any = true;
+    });
+    var none = content.querySelector('.mp-nothing');
+    if (none) none.hidden = any;
+  }
+
+  openBtn.addEventListener('click', function () {
+    picker.hidden = false;
+    openBtn.hidden = true;
+    search.value = '';
+    load();
+    search.focus();
+  });
+  function closePicker() {
+    picker.hidden = true;
+    openBtn.hidden = false;
+    openBtn.focus();
+  }
+  document.getElementById('mp-close').addEventListener('click', closePicker);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !picker.hidden) closePicker();
+  });
+  document.getElementById('mp-expand').addEventListener('click', function () {
+    content.querySelectorAll('.mp-group').forEach(function (g) { g.open = true; });
+  });
+  document.getElementById('mp-collapse').addEventListener('click', function () {
+    content.querySelectorAll('.mp-group').forEach(function (g) { g.open = false; });
+  });
+  search.addEventListener('input', filter);
+  if (hideBox) hideBox.addEventListener('change', filter);
+  search.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+  content.addEventListener('change', updateCount);
+
+  addBtn.addEventListener('click', function () {
+    var boxes = checked();
+    var firstQty = null;
+    boxes.forEach(function (box) {
+      var row = window.stroyAddRow('mat');
+      var item = box.getAttribute('data-item');
+      var deliverySelect = row.querySelector('select[name$="-delivery_item"]');
+      var materialSelect = row.querySelector('select[name$="-material"]');
+      window.stroySetSelect(deliverySelect, item || '');
+      window.stroySetSelect(materialSelect, item ? '' : box.getAttribute('data-material'));
+      var qty = row.querySelector('input[name$="-written_off_volume"]');
+      if (!firstQty) firstQty = qty;
+      var item = box.closest('.mp-item');
+      if (item) item.setAttribute('data-in-act', '1');
+      box.checked = false;
+    });
+    var n = boxes.length;
+    updateCount();
+    picker.hidden = true;
+    openBtn.hidden = false;
+    if (firstQty) firstQty.focus();
+    window.stroyToast('Добавлено материалов: ' + n + '. Укажите, сколько списано в акт.');
+  });
+
+  // если в отдельном окне добавили материал или накладную — обновляем список выбора
+  if ('BroadcastChannel' in window) {
+    new BroadcastChannel('stroy-ref').addEventListener('message', function () {
+      if (!picker.hidden) load();
+    });
+  }
+})();
+</script>
+{% endblock %}

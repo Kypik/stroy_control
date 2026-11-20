@@ -1,0 +1,26 @@
+<div class="cm-block" data-url="{% url 'cert_materials' upload.pk index %}" data-prefix="{{ prefix }}">
+  {% if suggestions %}
+  <div class="hint">Похоже, документ относится к этим материалам — отметьте нужные:</div>
+  <div class="cm-list">
+    {% for m, score, why in suggestions %}
+    <label class="cm-item cm-sugg"><input type="checkbox" name="{{ prefix }}-materials" value="{{ m.pk }}"{% if m.pk|stringformat:"s" in checked %} checked{% endif %}>
+      <span>{{ m.name }}</span><span class="mp-meta">{{ why|join:", " }}</span></label>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="hint">Подходящих материалов в справочнике не нашлось — выберите из списка ниже или добавьте новый.</div>
+  {% endif %}
+  <details class="cm-all"{% if not suggestions %} open{% endif %}>
+    <summary>Все материалы справочника</summary>
+    <input type="search" class="cm-search" placeholder="Поиск материала">
+    {% for category, items in groups %}
+    <div class="cm-group">
+      <div class="cm-cat">{{ category }}</div>
+      {% for m in items %}
+      <label class="cm-item" data-name="{{ m.name|lower }}"><input type="checkbox" name="{{ prefix }}-materials" value="{{ m.pk }}"{% if m.pk|stringformat:"s" in checked %} checked{% endif %}>
+        <span>{{ m.name }}</span><span class="mp-meta">{{ m.manufacturer|default_if_none:"" }}</span></label>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </details>
+</div>

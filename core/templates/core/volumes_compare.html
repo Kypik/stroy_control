@@ -1,0 +1,50 @@
+{% extends "core/base.html" %}
+{% block title %}Объёмы: смета и факт{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Объёмы: смета и факт — {{ site.name }}</h1>
+    <div class="sub">Показаны помещения и виды работ этого объекта. Факт — сумма замеров по помещению и виду работ. Красным — отклонение больше допустимого.</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'site_overview' site.pk %}">Обзор объекта</a>
+    <a class="btn" href="{% url 'site_act_from_volumes' site.pk %}{% if section_id %}?section={{ section_id }}{% endif %}">Создать акт из замеров</a>
+    <a class="btn" href="{% url 'ref_list' 'volumes' %}">Все замеры</a>
+    <a class="btn" href="{% url 'ref_list' 'estimate' %}">Сметные строки</a>
+    <a class="btn btn-primary" href="{% url 'ref_create' 'volumes' %}?next={{ request.path|urlencode }}">+ замер</a>
+  </div>
+</div>
+
+<form method="get" class="toolbar">
+  <span class="hint">Объект: {{ site.name }}</span>
+  <select name="section"><option value="">Все разделы</option>{% for sec in sections %}<option value="{{ sec.pk }}"{% if sec.pk|stringformat:"s" == section_id %} selected{% endif %}>{{ sec.name }}</option>{% endfor %}</select>
+  <input type="search" name="q" value="{{ q }}" placeholder="Помещение, вид работ или шифр сметы">
+  <label class="hint"><input type="checkbox" name="over" value="1"{% if only_over %} checked{% endif %}> только отклонения</label>
+  <button class="btn" type="submit">Показать</button>
+</form>
+
+<div class="rows-wrap">
+<table class="list js-sort">
+  <thead><tr><th>Помещение</th><th>Вид работ</th><th>Смета</th><th>Факт</th><th>Разница</th><th>%</th><th>Допуск</th><th data-no-sort>Решение</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr{% if r.over and not r.resolution %} class="row-problem"{% endif %}>
+    <td>{{ r.line.room }}</td>
+    <td>{{ r.line.work_type }}<div class="hint">{{ r.line.estimate_code }}{% if r.line.ks2_position %} · КС-2 {{ r.line.ks2_position }}{% endif %}</div></td>
+    <td class="num">{{ r.estimate|floatformat:"-2" }} {{ r.line.work_type.unit }}</td>
+    <td class="num">{{ r.fact|floatformat:"-2" }}</td>
+    <td class="num">{% if r.diff > 0 %}+{% endif %}{{ r.diff|floatformat:"-2" }}</td>
+    <td class="num">{{ r.percent|floatformat:1 }}%</td>
+    <td class="num">±{{ r.allowed }}%</td>
+    <td>
+      {% if r.resolution %}<a href="{% url 'ref_edit' 'deviations' r.resolution.pk %}">{{ r.resolution.get_status_display }}</a>
+      {% elif r.over %}<a class="btn" href="{{ r.resolve_url }}">Оформить решение</a>{% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="8" class="empty">Сметных строк нет — добавьте их в справочнике «Сметные строки».</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

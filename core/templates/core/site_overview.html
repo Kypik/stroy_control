@@ -1,0 +1,71 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Объект: {{ site.name }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_list' %}">Объекты</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>{{ site.name }}</h1>
+    <div class="sub">{{ site.address }}</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-primary" href="{% url 'site_act_create' site.pk %}">Новый акт</a>
+    <a class="btn" href="{% url 'site_act_from_volumes' site.pk %}">Акт из замеров</a>
+    <a class="btn" href="{% url 'site_cert_uploads' site.pk %}">Загрузить сертификаты</a>
+    <a class="btn" href="{% url 'site_edit' site.pk %}">Карточка объекта</a>
+  </div>
+</div>
+
+<div class="ref-groups overview-grid">
+  <section class="panel">
+    <div class="panel-head"><h2>Что требует работы</h2></div>
+    <ul class="count-list">
+      {% if free_volumes %}
+      <li><a href="{% url 'ref_list' 'volumes' %}?f_act=none">Свободные замеры</a><span class="count">{{ free_volumes }}</span></li>
+      {% endif %}
+      {% if unmatched_items %}
+      <li><a href="{% url 'site_delivery_matching' site.pk %}">Несопоставленные строки накладных</a><span class="count">{{ unmatched_items }}</span></li>
+      {% endif %}
+      {% if not free_volumes and not unmatched_items %}
+      <li class="count-ok">Свободных замеров и несопоставленных строк нет.</li>
+      {% endif %}
+      <li><a href="{% url 'site_attention' site.pk %}">Внимание по объекту</a><span class="count">→</span></li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Акты</h2><span class="count">всего {{ acts_total }}</span></div>
+    <ul class="count-list">
+      {% for c in status_counts %}
+      <li><a href="{% url 'site_acts' site.pk %}?status={{ c.value }}">{{ c.label }}</a><span class="count">{{ c.count }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Разделы объекта</h2></div>
+    <ul class="count-list">
+      <li><a href="{% url 'site_deliveries' site.pk %}">Накладные</a><span class="count">{{ deliveries_total }}</span></li>
+      <li><a href="{% url 'site_materials' site.pk %}">Материалы</a><span class="count">{{ materials_total }}</span></li>
+      <li><a href="{% url 'site_certificates' site.pk %}">Сертификаты</a><span class="count">{{ certificates_total }}</span></li>
+      <li><a href="{% url 'site_journal' site.pk %}">Журнал ВК</a><span class="count">→</span></li>
+      <li><a href="{% url 'site_volumes' site.pk %}">Объёмы: смета и факт</a><span class="count">→</span></li>
+      <li><a href="{% url 'ref_list' 'sections' %}">Разделы документации</a><span class="count">{{ sections_total }}</span></li>
+    </ul>
+  </section>
+</div>
+
+<details class="panel overview-requisites">
+  <summary style="cursor:pointer;font-weight:600;font-size:15px">Реквизиты объекта</summary>
+  <table class="list" style="margin-top:12px">
+    <tbody>
+      <tr><th style="width:220px">Адрес</th><td>{{ site.address }}</td></tr>
+      <tr><th>Застройщик / заказчик</th><td>{{ site.customer }}</td></tr>
+      <tr><th>Генподрядчик</th><td>{{ site.general_contractor }}</td></tr>
+      {% if site.designer %}<tr><th>Проектировщик</th><td>{{ site.designer }}</td></tr>{% endif %}
+      {% if site.responsible_person %}<tr><th>Ответственный</th><td>{{ site.responsible_person }}</td></tr>{% endif %}
+      {% if site.contract_reference %}<tr><th>Договор подряда</th><td>{{ site.contract_reference }}</td></tr>{% endif %}
+      {% if site.design_doc_reference %}<tr><th>Проектная документация</th><td>{{ site.design_doc_reference }}</td></tr>{% endif %}
+    </tbody>
+  </table>
+</details>
+{% endblock %}

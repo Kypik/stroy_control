@@ -1,0 +1,7 @@
+{% if text %}
+<span class="help-wrap">
+  <button type="button" class="help-btn" aria-label="{{ label }}"
+          popovertarget="help-{{ uid }}" title="{{ label }}">?</button>
+  <span id="help-{{ uid }}" popover class="help-pop" role="note">{{ text }}</span>
+</span>
+{% endif %}

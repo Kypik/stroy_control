@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Сертификаты — {{ site.name }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_overview' site.pk %}">{{ site.name }}</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>Сертификаты объекта — {{ site.name }}</h1>
+    <div class="sub">Документы материалов, поставлявшихся на объект, и загруженные в нём · найдено: {{ page.paginator.count }}</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-primary" href="{% url 'site_cert_uploads' site.pk %}">Загрузить сертификаты</a>
+    <a class="btn" href="{% url 'site_cert_uploads' site.pk %}">Ввести по номеру</a>
+    <a class="btn" href="{% url 'ref_list' 'certificates' %}">Глобальный справочник</a>
+  </div>
+</div>
+
+<div class="hint" style="margin-bottom:12px">Документы материалов, поставлявшихся на объект. {% help_pop "site.certificates" %}</div>
+
+<form method="get" class="toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Номер документа, материал, изготовитель или продукция">
+  <button class="btn" type="submit">Найти</button>
+  {% if q %}<a href="{% url 'site_certificates' site.pk %}">Сбросить</a>{% endif %}
+</form>
+
+<div class="rows-wrap">
+<table class="list">
+  <thead><tr>
+    <th>Номер</th><th>Тип</th><th>Материалы</th><th>Изготовитель</th>
+    <th>Выдан</th><th>Действует до</th><th>Проверка</th><th>Реестр</th>
+  </tr></thead>
+  <tbody>
+  {% for cert in page %}
+    <tr>
+      <td><a href="{% url 'ref_edit' 'certificates' cert.pk %}">{{ cert.document_number|default:"(без номера)" }}</a></td>
+      <td>{{ cert.get_document_type_display }}</td>
+      <td>{{ cert.materials_label|default:"" }}</td>
+      <td>{{ cert.manufacturer|default:"" }}</td>
+      <td class="num">{% if cert.issue_date %}{{ cert.issue_date|date:"d.m.Y" }}{% endif %}</td>
+      <td class="num">{% if cert.expiry_date %}{{ cert.expiry_date|date:"d.m.Y" }}{% endif %}</td>
+      <td>{{ cert.get_verification_status_display }}</td>
+      <td>{% if cert.registry_status %}{{ cert.get_registry_status_display }}{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="8" class="empty">У объекта пока нет сертификатов: оформите поставку материалов или загрузите документы.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if page.has_other_pages %}
+<div class="pager">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">← Назад</a>{% endif %}
+  <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Дальше →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

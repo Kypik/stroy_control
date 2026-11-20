@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}Объекты{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Объекты</h1>
+    <div class="sub">Выберите объект: его акты, поставки, журнал и объёмы откроются в своём пространстве.</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'attention_all' %}">Внимание по всем объектам</a>
+    <a class="btn btn-primary" href="{% url 'ref_create' 'sites' %}">Добавить объект</a>
+  </div>
+</div>
+
+<form method="get" class="toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Название, адрес, заказчик или подрядчик">
+  <button class="btn" type="submit">Найти</button>
+  {% if q %}<a href="{% url 'site_list' %}">Сбросить</a>{% endif %}
+</form>
+
+<div class="ref-groups">
+  {% for s in sites %}
+  <section class="panel">
+    <h2><a href="{% url 'site_overview' s.pk %}">{{ s.name }}</a></h2>
+    <div class="hint">{{ s.address }}</div>
+    <div class="hint">Заказчик: {{ s.customer }}</div>
+    <div class="hint">Генподрядчик: {{ s.general_contractor }}</div>
+    <ul style="margin-top:10px">
+      <li><a href="{% url 'site_acts' s.pk %}">Акты</a><span class="count">{{ s.acts_count }}</span></li>
+      <li><a href="{% url 'site_deliveries' s.pk %}">Накладные</a><span class="count">{{ s.deliveries_count }}</span></li>
+      <li><a href="{% url 'site_journal' s.pk %}">Журнал ВК</a><span class="count">→</span></li>
+      <li><a href="{% url 'site_volumes' s.pk %}">Объёмы</a><span class="count">→</span></li>
+    </ul>
+  </section>
+  {% empty %}
+  <section class="panel">
+    <p class="empty" style="padding:0">{% if q %}По запросу ничего не найдено.{% else %}Объектов пока нет. Нажмите «Добавить объект».{% endif %}</p>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

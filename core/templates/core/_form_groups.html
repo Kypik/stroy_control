@@ -1,0 +1,13 @@
+{% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+{% for group in form_groups %}
+<details class="form-group"{% if group.open or group.has_errors %} open{% endif %}>
+  <summary>
+    {{ group.title }}
+    {% if group.has_errors %}<span class="badge badge-err">ошибки</span>{% endif %}
+  </summary>
+  <div class="fields">
+    {% for field in group.fields %}{% include "core/_field.html" with field=field %}{% endfor %}
+  </div>
+</details>
+{% endfor %}

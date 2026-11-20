@@ -5,12 +5,14 @@ from .models import (
     Certificate, MaterialCertificate, DeliveryNote, DeliveryItem,
     IncomingInspection, EstimateLine, HiddenWorkAct, ActSigner,
     ActMaterial, ActAttachment, DeviationResolution, WorkVolume,
+    SRO,
 )
 
 admin.site.register(Documents)
 admin.site.register(Standard)
 admin.site.register(Counterparty)
 admin.site.register(Person)
+admin.site.register(SRO)
 admin.site.register(Material)
 admin.site.register(ConstructionSite)
 admin.site.register(Room)

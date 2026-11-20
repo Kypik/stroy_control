@@ -1,0 +1,80 @@
+{% load ui %}{% comment %}
+Шапка акта: свёрнутый блок. Данные фиксируются снимком при создании акта.
+Правки полей header_* пишутся только в снимок этого акта, карточку объекта не меняют.
+Группы и сводка собираются в core.services.header_row_groups / header_summary.
+{% endcomment %}
+<details class="act-header panel act-section" id="act-header">
+  <summary class="panel-head act-header-summary">
+    <span class="section-title">Шапка акта</span>
+    <span class="section-meta">
+      {% if header_is_snapshot %}
+      <span class="badge badge-muted" title="Данные зафиксированы при создании акта">Зафиксирована при создании</span>
+      {% else %}
+      <span class="badge badge-muted" title="Снимка нет — шапка собрана из карточки объекта">Из карточки объекта</span>
+      {% endif %}
+    </span>
+  </summary>
+
+  <div class="section-body">
+    <p class="hint" style="margin-top:0">Организации и реквизиты для бланка. {% help_pop "act.header" %}</p>
+    <div class="act-header-facts">
+      {% for label, value in header_summary %}{% if value %}
+      <div><span class="hint">{{ label }}:</span> {{ value }}</div>
+      {% endif %}{% endfor %}
+    </div>
+
+    <div class="act-header-groups">
+      {% for group in header_groups %}
+      <details class="header-group"{% if group.key == 'object' %} open{% endif %}>
+        <summary>{{ group.title }}</summary>
+        <table class="rows">
+          <tbody>
+          {% for row in group.rows %}
+            <tr><th>{{ row.label }}</th><td>{{ row.display|default:"—" }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </details>
+      {% endfor %}
+    </div>
+
+    <div class="btn-row" style="margin-top:12px">
+      <button type="button" class="btn" id="act-header-edit"
+              aria-expanded="false" aria-controls="act-header-fields">Изменить для этого акта</button>
+      {% if act and header_is_snapshot %}
+      <button type="submit" class="btn" name="header_action" value="reset"
+              title="Собрать шапку заново из текущей карточки объекта">Вернуть как у объекта</button>
+      {% endif %}
+    </div>
+
+    <div id="act-header-fields" hidden style="margin-top:12px">
+      <p class="hint" style="margin-top:0">Правки сохранятся только в этом акте. {% help_pop "act.header_edit" %}</p>
+      {% for group in header_groups %}
+      <fieldset class="header-edit-group">
+        <legend>{{ group.title }}</legend>
+        <div class="fields">
+          {% for row in group.rows %}
+          <div class="field">
+            <label for="header-{{ row.name }}">{{ row.label }}</label>
+            <input type="text" id="header-{{ row.name }}" name="header_{{ row.name }}" value="{{ row.value }}" autocomplete="off">
+          </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+    </div>
+  </div>
+</details>
+<script>
+(function () {
+  var edit = document.getElementById('act-header-edit');
+  var fields = document.getElementById('act-header-fields');
+  if (!edit || !fields) return;
+  edit.addEventListener('click', function () {
+    fields.hidden = !fields.hidden;
+    edit.setAttribute('aria-expanded', String(!fields.hidden));
+    edit.textContent = fields.hidden ? 'Изменить для этого акта' : 'Свернуть правку';
+    if (!fields.hidden) fields.querySelector('input').focus();
+  });
+})();
+</script>

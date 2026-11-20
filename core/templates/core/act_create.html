@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Новый акт{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_acts' site.pk %}">Акты объекта «{{ site.name }}»</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>Новый акт — {{ site.name }}</h1>
+    <div class="sub">В списке разделов — только разделы этого объекта.</div>
+  </div>
+</div>
+
+<form method="post" class="panel">
+  {% csrf_token %}
+  <div class="panel-head">
+    <h2>Реквизиты</h2>
+    <span class="hint">Работы, материалы и подписанты — на следующем шаге</span>
+  </div>
+  {% if not section_count %}
+  <div class="warnings small">У объекта нет разделов документации. Сначала добавьте раздел в справочнике «Разделы документации».</div>
+  {% endif %}
+  {% include "core/_form.html" %}
+  <div class="btn-row" style="margin-top:16px">
+    <button class="btn btn-primary" type="submit">Создать и продолжить</button>
+    <a class="btn" href="{% url 'site_acts' site.pk %}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

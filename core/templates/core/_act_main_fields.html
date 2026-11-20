@@ -1,0 +1,21 @@
+{% load ui %}{% comment %}Реквизиты акта: на виду только то, что заполняется каждый раз.
+Остальное спрятано в «Последующие работы и оформление», но остаётся в форме.{% endcomment %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+{% if form.non_field_errors %}
+<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+{% endif %}
+<div class="fields act-main-fields">
+  {% include "core/_field.html" with field=form.act_number %}
+  {% include "core/_field.html" with field=form.drawn_up_date %}
+  {% include "core/_field.html" with field=form.section %}
+</div>
+
+<details class="advanced"{% if form.next_work_type.errors or form.next_work_override.errors or form.copies_count.errors or form.status.errors %} open{% endif %}>
+  <summary>Последующие работы и оформление</summary>
+  <p class="hint" style="margin-top:0">Пункт 7 акта, число экземпляров и статус. {% help_pop "act.next_work" %} {% help_pop "act.status" uid="act-status" %}</p>
+  <div class="fields act-advanced-fields">
+    {% include "core/_field.html" with field=form.next_work_type %}
+    {% include "core/_field.html" with field=form.next_work_override %}
+    {% include "core/_field.html" with field=form.copies_count %}
+  </div>
+</details>

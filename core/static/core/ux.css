@@ -1,0 +1,246 @@
+/* UX-слой поверх базового оформления: секции карточки акта, бейджи, навигация,
+   кликабельные замечания и полноэкранный предпросмотр. */
+
+/* --- Секции-аккордеоны ------------------------------------------------- */
+.act-section > summary.panel-head {
+  list-style: none; cursor: pointer; margin-bottom: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px 12px;
+}
+.act-section > summary::-webkit-details-marker { display: none; }
+.act-section > summary::before {
+  content: "▸"; color: var(--muted); margin-right: 6px; flex: 0 0 auto;
+}
+.act-section[open] > summary::before { content: "▾"; }
+.act-section[open] > summary.panel-head { margin-bottom: 12px; }
+.section-title {
+  font-size: 15px; font-weight: 600; display: flex; gap: 8px;
+  align-items: baseline; min-width: 0;
+}
+.section-num { color: var(--muted); }
+.section-meta {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  margin-left: auto; min-width: 0;
+}
+.act-section .section-body { min-width: 0; }
+.act-section > summary .hint { white-space: nowrap; }
+
+/* --- Блоки формы справочника ----------------------------------------- */
+.form-group { border-top: 1px solid var(--line); padding: 10px 0; }
+.form-group:first-of-type { border-top: 0; padding-top: 0; }
+.form-group > summary {
+  cursor: pointer; font-weight: 600; font-size: 14px;
+  display: flex; gap: 8px; align-items: center; padding: 4px 0;
+}
+.form-group[open] > summary { margin-bottom: 12px; }
+
+/* --- Бейджи ----------------------------------------------------------- */
+.badge {
+  display: inline-block; padding: 0 6px; border: 1px solid var(--line-strong);
+  border-radius: 2px; font-size: 11px; line-height: 18px; color: var(--muted);
+  background: #fff; white-space: nowrap; font-weight: 400;
+}
+.badge-warn { border-color: var(--warn-line); color: #7a560b; background: var(--warn-bg); }
+.badge-err { border-color: var(--err-line); color: var(--danger); background: var(--err-bg); }
+.badge-muted { background: #f4f4f2; }
+
+/* --- Оглавление карточки --------------------------------------------- */
+.act-nav {
+  display: flex; gap: 2px; flex-wrap: wrap; margin-bottom: 12px;
+  position: sticky; top: 0; z-index: 20; background: var(--bg);
+  padding: 6px 0; border-bottom: 1px solid var(--line);
+}
+.act-nav a {
+  padding: 5px 10px; border: 1px solid transparent; border-radius: 2px;
+  color: var(--muted); white-space: nowrap;
+}
+.act-nav a:hover {
+  color: var(--text); background: #fff; border-color: var(--line);
+  text-decoration: none;
+}
+
+/* --- Свёрнутые дополнительные блоки ---------------------------------- */
+.advanced { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.advanced > summary,
+.free-volumes > summary,
+.header-group > summary {
+  cursor: pointer; color: var(--accent); font-size: 13px; padding: 4px 0;
+}
+.advanced[open] > summary { margin-bottom: 10px; }
+.free-volumes { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* --- Шапка акта ------------------------------------------------------- */
+.act-header-facts {
+  display: grid; gap: 2px 20px; margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.header-group { border-top: 1px solid #ecece8; padding: 6px 0; }
+.header-group table.rows { margin-top: 6px; }
+.header-group th {
+  width: 42%; font-weight: 400; color: var(--muted); font-size: 13px;
+}
+.header-edit-group {
+  border: 1px solid var(--line); padding: 10px 12px; margin: 0 0 12px;
+}
+.header-edit-group legend { font-weight: 600; font-size: 13px; padding: 0 4px; }
+
+/* --- Вспомогательные блоки ------------------------------------------- */
+.corrected-panel { border-left: 4px solid var(--line-strong); }
+.all-good-line {
+  color: #2c5e2c; background: var(--ok-bg); border: 1px solid var(--ok-line);
+  border-left-width: 4px; padding: 8px 14px; margin-bottom: 16px;
+}
+.more-actions { position: relative; }
+.more-actions > summary { list-style: none; }
+.more-actions > summary::-webkit-details-marker { display: none; }
+.more-actions-body {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 50;
+  background: #fff; border: 1px solid var(--line-strong); padding: 8px;
+  display: flex; flex-direction: column; gap: 6px; min-width: 230px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .12);
+}
+.more-actions-body form { display: block; }
+.more-actions-body .btn { width: 100%; text-align: left; }
+
+/* --- Автодополнение Tom Select --------------------------------------- */
+.ts-wrapper { min-width: 0; }
+.ts-wrapper.single .ts-control {
+  min-height: 32px; padding: 0 7px; border: 1px solid var(--line-strong);
+  border-radius: 2px; background: #fff; box-shadow: none;
+  font: inherit; color: var(--text);
+}
+.ts-wrapper.single .ts-control > input { font: inherit; height: 30px; }
+.ts-wrapper.single.input-active .ts-control,
+.ts-wrapper.focus .ts-control {
+  border-color: var(--accent); box-shadow: none;
+  outline: 2px solid var(--accent); outline-offset: -1px;
+}
+.ts-dropdown {
+  border: 1px solid var(--line-strong); border-radius: 2px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .15); font-size: 14px;
+  background: #fff;
+}
+.ts-dropdown .optgroup-header {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .03em; background: #fafaf8;
+}
+.ts-dropdown .option { padding: 6px 10px; }
+.ts-dropdown .option.active { background: var(--accent); color: #fff; }
+.ts-dropdown .option.selected { font-weight: 600; }
+.field .ts-wrapper, table.rows td .ts-wrapper { width: 100%; }
+.picker-opt {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted); white-space: nowrap;
+}
+
+/* --- «?»-подсказки ---------------------------------------------------- */
+.help-wrap { position: relative; display: inline-block; vertical-align: middle; line-height: 1; }
+.help-btn {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid var(--line-strong); background: #fff; color: var(--muted);
+  font: 600 11px/16px system-ui, sans-serif; padding: 0; cursor: pointer;
+}
+.help-btn:hover { color: var(--accent); border-color: var(--accent); }
+.help-pop {
+  max-width: 360px; padding: 10px 12px; border: 1px solid var(--line-strong);
+  background: #fff; box-shadow: 0 6px 20px rgba(0, 0, 0, .15);
+  font-size: 13px; line-height: 1.45; color: var(--text);
+}
+.field > .help-wrap { position: absolute; top: 0; right: 0; }
+.field:has(> .help-wrap) > label { padding-right: 24px; }
+.no-popover .help-pop { display: none; }
+.no-popover .help-pop.is-open {
+  display: block; position: absolute; z-index: 300; right: 0;
+  top: calc(100% + 4px); width: min(360px, 80vw);
+}
+
+/* --- Обзор объекта и списки ------------------------------------------- */
+.count-list { list-style: none; margin: 0; padding: 0; }
+.count-list li {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 6px 0; border-bottom: 1px solid #ecece8;
+}
+.count-list li:last-child { border-bottom: 0; }
+.count-list a { min-width: 0; overflow-wrap: break-word; }
+.count-ok { color: var(--muted); }
+
+.filters-more { flex: 0 0 auto; }
+.filters-more > summary {
+  cursor: pointer; color: var(--accent); font-size: 13px;
+  padding: 6px 4px; white-space: nowrap;
+}
+.filters-more[open] { flex-basis: 100%; }
+.filters-more-body {
+  display: flex; gap: 8px; flex-wrap: wrap; width: 100%;
+  padding-top: 8px; border-top: 1px solid var(--line);
+}
+
+/* длинные списки: заголовки таблицы остаются на виду при прокрутке */
+.rows-wrap table.list thead th {
+  position: sticky; top: 0; z-index: 4;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+/* --- Модальное окно «+ создать» -------------------------------------- */
+.ref-modal {
+  width: min(1000px, 96vw); height: min(820px, 92vh);
+  max-width: 96vw; max-height: 92vh; padding: 0;
+  border: 1px solid var(--line-strong); background: var(--panel);
+}
+.ref-modal::backdrop { background: rgba(20, 25, 30, .45); }
+.ref-modal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line);
+}
+.ref-modal-head h2 { margin: 0; }
+.ref-modal-body { position: relative; height: calc(100% - 49px); }
+.ref-modal-body iframe { display: block; width: 100%; height: 100%; border: 0; }
+.ref-modal-loading {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; background: var(--panel); color: var(--muted);
+}
+.ref-modal-loading[hidden] { display: none; }
+
+/* --- Замечания как навигация ----------------------------------------- */
+.warnings a { color: inherit; text-decoration: underline; }
+.warnings a:hover { color: var(--danger); }
+.warnings-more { margin-top: 4px; }
+.warnings-more > summary { cursor: pointer; color: #7a560b; font-size: 13px; }
+.warnings-more ul { margin-top: 4px; }
+tr.row-warning td { background: var(--warn-bg); }
+
+/* --- Предпросмотр ----------------------------------------------------- */
+.pv-close { display: none; float: right; }
+.dirty-indicator { color: var(--muted); font-size: 13px; margin-right: auto; }
+.dirty-indicator.is-dirty { color: #7a560b; }
+.dirty-indicator.is-dirty::before { content: "● "; }
+body.pv-locked { overflow: hidden; }
+@media (min-width: 1401px) {
+  #pv-toggle { display: none; }   /* предпросмотр и так в правой колонке */
+}
+
+@media (max-width: 1400px) {
+  .act-preview.pv-open {
+    display: block; position: fixed; inset: 0; z-index: 200;
+    max-height: none; overflow: auto; border: 0; padding: 12px;
+    background: var(--panel);
+  }
+  .act-preview.pv-open .pv-close { display: inline-block; }
+}
+
+@media (max-width: 700px) {
+  .act-nav { overflow-x: auto; flex-wrap: nowrap; }
+  .act-nav a { white-space: nowrap; }
+  .section-meta { width: 100%; margin-left: 0; }
+  .sticky-actions .dirty-indicator { flex-basis: 100%; }
+  .row-remove { min-width: 40px; min-height: 40px; }
+  .more-actions-body { position: static; box-shadow: none; }
+}
+
+@media print {
+  .act-nav, .sticky-actions, .act-preview, .more-actions, .crumbs, header.top {
+    display: none !important;
+  }
+  details > * { display: block !important; }
+  details > summary { display: none !important; }
+}

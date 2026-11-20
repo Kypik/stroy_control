@@ -1,0 +1,24 @@
+{% extends "core/base.html" %}
+{% block title %}Сохранено{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:480px">
+  <h1 style="margin-bottom:8px">Сохранено</h1>
+  <p>«{{ label }}» добавлено. Окно можно закрыть — списки в акте уже обновлены.</p>
+  <button class="btn" type="button" onclick="window.close()">Закрыть окно</button>
+</div>
+<script>
+  var saved = {
+    label: "{{ label|escapejs }}",
+    model: "{{ model|escapejs }}",
+    pk: "{{ pk|escapejs }}"
+  };
+  try { new BroadcastChannel('stroy-ref').postMessage(saved); } catch (e) {}
+  try {
+    if (window.parent && window.parent !== window) {
+      saved.type = 'stroy-ref-saved';
+      window.parent.postMessage(saved, location.origin);
+    }
+  } catch (e) {}
+  setTimeout(function () { window.close(); }, 400);
+</script>
+{% endblock %}

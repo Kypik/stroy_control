@@ -1,3 +1,10 @@
 .env
-__pycache__
+__pycache__/
+*.py[cod]
+venv/
+media/
+backups/
+work_check/
+registry_debug.json
+staticfiles/
 

@@ -1,0 +1,85 @@
+{% extends "core/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% if not popup %}<div class="crumbs"><a href="{% url 'ref_index' %}">Справочники</a> / <a href="{% url 'ref_list' entry.slug %}">{{ list_title|capfirst }}</a> /</div>{% endif %}
+<div class="page-head">
+  <h1>{{ title|capfirst }}</h1>
+  {% if obj and not popup %}<a class="btn btn-danger" href="{% url 'ref_delete' entry.slug obj.pk %}">Удалить</a>{% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data" data-dirty-guard>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% if popup %}<input type="hidden" name="popup" value="1">{% endif %}
+  <section class="panel">
+    {% if form_groups %}
+    {% include "core/_form_groups.html" %}
+    {% else %}
+    {% include "core/_form.html" %}
+    {% endif %}
+  </section>
+
+  {% if inline_fs %}
+  <section class="panel">
+    <div class="panel-head"><h2>{{ inline_fs.title|capfirst }}</h2></div>
+    {% include "core/_formset.html" with fs=inline_fs %}
+  </section>
+  {% endif %}
+
+  {% if entry.slug == 'certificates' and obj and not popup %}
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Реестр Росаккредитации</h2>
+      {% if obj.document_type != 'Отказное письмо' %}
+      <button class="btn" type="submit" formaction="{% url 'cert_registry_recheck' obj.pk %}" formnovalidate>Проверить в реестре</button>
+      {% endif %}
+    </div>
+    <p style="margin:0">
+      {% if obj.registry_status %}Статус: <b>{{ obj.get_registry_status_display }}</b>{% if obj.registry_checked_at %}, проверен {{ obj.registry_checked_at|date:"d.m.Y H:i" }}{% endif %}.
+      {% else %}Ещё не проверялся.{% endif %}
+      {% if obj.registry_record_id %}
+      <a class="btn" href="{{ obj.registry_url }}" target="_blank" rel="noopener noreferrer">Карточка в реестре ↗</a>
+      {% elif obj.registry_url %}<a href="{{ obj.registry_url }}" target="_blank" rel="noopener">Карточка в реестре ↗</a>{% endif %}
+      {% if obj.check_url %}<a href="{{ obj.check_url }}" target="_blank" rel="noopener">Проверка на сайте органа ↗</a>{% endif %}
+    </p>
+    <p class="hint" style="margin-bottom:0">Данные: {{ obj.get_source_display }}.{% if obj.document %} Скан: {{ obj.document }}{% if obj.pages %}, стр. {{ obj.pages }}{% endif %}.{% endif %}</p>
+  </section>
+  {% endif %}
+
+  {% if entry.slug == 'materials' and obj and not popup %}
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Документы о качестве</h2>
+      <a class="btn" href="{% url 'cert_uploads' %}?material={{ obj.pk }}">Загрузить сертификат</a>
+    </div>
+    {% with links=obj.materialcertificate_set.all %}
+    {% if links %}
+    <table class="list">
+      <thead><tr><th>Документ</th><th>Действует</th><th>Статус</th></tr></thead>
+      <tbody>
+      {% for mc in links %}{% with c=mc.certificate %}
+        <tr>
+          <td><a href="{% url 'ref_edit' 'certificates' c.pk %}">{{ c.document_type }} №{{ c.document_number }}</a></td>
+          <td>{% if c.expiry_date %}с {{ c.issue_date|date:"d.m.Y" }} по {{ c.expiry_date|date:"d.m.Y" }}{% else %}от {{ c.issue_date|date:"d.m.Y" }}{% endif %}</td>
+          <td>{{ c.get_verification_status_display }}</td>
+        </tr>
+      {% endwith %}{% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="hint">Документов нет — материал нельзя будет включить в акт.</p>
+    {% endif %}
+    {% endwith %}
+  </section>
+  {% endif %}
+
+  <div class="sticky-actions">
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+    {% if popup %}
+    <button class="btn" type="button" onclick="if (window.parent && window.parent !== window) { window.parent.postMessage({type: 'stroy-ref-close'}, location.origin); } else { window.close(); }">Отмена</button>
+    {% else %}
+    <a class="btn" href="{% if next %}{{ next }}{% else %}{% url 'ref_list' entry.slug %}{% endif %}">Отмена</a>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}

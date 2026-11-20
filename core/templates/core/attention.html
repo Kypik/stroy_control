@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}Требует внимания{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Требует внимания{% if site %} — {{ site.name }}{% endif %}</h1>
+    <div class="sub">{% if total %}Найдено: {{ total }}. Нажмите на строку, чтобы перейти к исправлению.{% else %}Проблем не найдено.{% endif %}</div>
+  </div>
+  <div class="btn-row">
+    {% if site %}
+    <a class="btn" href="{% url 'site_overview' site.pk %}">Обзор объекта</a>
+    <a class="btn" href="{% url 'attention_all' %}">Все объекты</a>
+    {% else %}
+    <a class="btn" href="{% url 'site_list' %}">К объектам</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if site %}
+<div class="hint" style="margin-bottom:12px">Здесь показаны акты, накладные, объёмы и полномочия подписантов этого объекта.
+  Сертификаты и загрузки документов — в <a href="{% url 'attention_all' %}">общем экране «Внимание»</a>.</div>
+{% endif %}
+
+{% if not groups %}
+<div class="all-good">Всё в порядке: накладные сопоставлены, акты формируются, отклонений и просроченных полномочий нет.</div>
+{% endif %}
+
+{% for g in groups %}
+<section class="panel attention-{{ g.level }}">
+  <div class="panel-head"><h2>{{ g.title }}</h2><span class="count">{{ g.items|length }}</span></div>
+  <ul class="attention-list">
+    {% for text, url in g.items %}
+    <li>{% if url %}<a href="{{ url }}">{{ text }}</a>{% else %}{{ text }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+{% endblock %}

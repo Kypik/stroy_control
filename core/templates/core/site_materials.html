@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Материалы — {{ site.name }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_overview' site.pk %}">{{ site.name }}</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>Материалы объекта — {{ site.name }}</h1>
+    <div class="sub">Из накладных объекта · найдено: {{ page.paginator.count }}</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'site_deliveries' site.pk %}">Накладные объекта</a>
+    <a class="btn btn-primary" href="{% url 'ref_list' 'materials' %}">Глобальный справочник</a>
+  </div>
+</div>
+
+<div class="hint" style="margin-bottom:12px">Материалы из накладных этого объекта. {% help_pop "site.materials" %}</div>
+
+<form method="get" class="toolbar">
+  <input type="search" name="q" value="{{ q }}" placeholder="Название, категория, производитель или норматив">
+  <button class="btn" type="submit">Найти</button>
+  {% if q %}<a href="{% url 'site_materials' site.pk %}">Сбросить</a>{% endif %}
+</form>
+
+<div class="rows-wrap">
+<table class="list">
+  <thead><tr>
+    <th>Название</th><th>Категория</th><th>Ед. изм.</th><th>Производитель</th>
+    <th>Норматив</th><th>Поставок</th><th>Последняя поставка</th>
+  </tr></thead>
+  <tbody>
+  {% for material in page %}
+    <tr>
+      <td><a href="{% url 'ref_edit' 'materials' material.pk %}">{{ material.name }}</a></td>
+      <td>{{ material.category }}</td>
+      <td>{{ material.unit }}</td>
+      <td>{{ material.manufacturer|default:"" }}</td>
+      <td>{{ material.standard|default:"" }}</td>
+      <td class="num">{{ material.deliveries_count }}</td>
+      <td class="num">{% if material.last_delivery %}{{ material.last_delivery|date:"d.m.Y" }}{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="empty">В накладных объекта пока нет материалов.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if page.has_other_pages %}
+<div class="pager">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">← Назад</a>{% endif %}
+  <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Дальше →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

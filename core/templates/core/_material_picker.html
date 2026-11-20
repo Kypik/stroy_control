@@ -1,0 +1,46 @@
+{% if not catalog.groups and not catalog.recent %}
+<p class="hint">В справочнике пока нет материалов. <a href="{% url 'ref_create' 'materials' %}?popup=1" data-popup target="_blank" rel="noopener">Добавить материал</a></p>
+{% else %}
+<div class="mp-body">
+  {% if catalog.recent %}
+  <details class="mp-group mp-recent" open>
+    <summary><span>Недавние поставки</span><span class="count">{{ catalog.recent|length }}</span></summary>
+    <ul>
+      {% for r in catalog.recent %}
+      <li class="mp-item" data-name="{{ r.search }}" data-search="{{ r.search }}" data-in-act="{{ r.in_act|yesno:'1,0' }}">
+        <label>
+          <input type="checkbox" value="{{ r.material_id }}" data-item="{{ r.item_id }}" data-material="{{ r.material_id }}">
+          <span class="mp-name">{{ r.name }}</span>
+          <span class="mp-meta">
+            {{ r.quantity }} {{ r.unit }} · №{{ r.note_number }} от {{ r.delivery_date }}
+            {% if r.in_act %} · <b>уже в акте</b>{% endif %}
+          </span>
+        </label>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+  {% for group in catalog.groups %}
+  <details class="mp-group">
+    <summary><span>{{ group.category }}</span><span class="count">{{ group.materials|length }}</span></summary>
+    <ul>
+      {% for m in group.materials %}
+      <li class="mp-item" data-name="{{ m.search }}" data-search="{{ m.search }}" data-in-act="{{ m.in_act|yesno:'1,0' }}">
+        <label>
+          <input type="checkbox" value="{{ m.id }}" data-item="{{ m.default_item|default_if_none:'' }}" data-material="{{ m.id }}">
+          <span class="mp-name">{{ m.name }}</span>
+          <span class="mp-meta">
+            {% if m.unit %}{{ m.unit }} · {% endif %}
+            {% if m.default_item %}поставок: {{ m.deliveries }}, последняя {{ m.last_delivery }}{% else %}без накладной{% endif %}
+            {% if m.in_act %} · <b>уже в акте</b>{% endif %}
+          </span>
+        </label>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endfor %}
+  <p class="mp-nothing hint" hidden>Ничего не найдено.</p>
+</div>
+{% endif %}

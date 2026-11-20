@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Объект: {{ site.name }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_list' %}">Объекты</a> / <a href="{% url 'site_overview' site.pk %}">{{ site.name }}</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>{{ site.name }}</h1>
+    <div class="sub">Карточка объекта: реквизиты и подписанты по умолчанию.</div>
+  </div>
+  <a class="btn" href="{% url 'site_overview' site.pk %}">Обзор объекта</a>
+</div>
+
+<div class="hint" style="margin-bottom:12px">Подписанты подставляются в <strong>новые</strong> акты объекта. {% help_pop "site.signers" %}</div>
+
+<form method="post" data-dirty-guard>
+  {% csrf_token %}
+
+  <section class="panel">
+    <div class="panel-head"><h2>Реквизиты объекта</h2></div>
+    {% if form_groups %}
+    {% include "core/_form_groups.html" %}
+    {% else %}
+    {% include "core/_form.html" with form=form %}
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Подписанты по умолчанию</h2>
+      <a class="hint" href="{% url 'ref_create' 'persons' %}?popup=1" data-popup target="_blank" rel="noopener">+ участник</a>
+    </div>
+    <p class="hint" style="margin-top:0">Одна роль — один человек. Подставляются в новый акт при его создании, в акте можно изменить.</p>
+    {% include "core/_formset.html" with fs=signers delete_label="Убрать" %}
+  </section>
+
+  <div class="sticky-actions">
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+    <a class="btn" href="{% url 'ref_list' 'sites' %}">К списку объектов</a>
+  </div>
+</form>
+{% endblock %}

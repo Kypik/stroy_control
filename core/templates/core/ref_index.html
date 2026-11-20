@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}Справочники{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Справочники</h1>
+    <div class="sub">Заводятся один раз и потом выбираются из списков в актах.</div>
+  </div>
+</div>
+<div class="ref-groups">
+  {% for title, items in groups %}
+  <section class="panel">
+    <h2>{{ title }}</h2>
+    <ul>
+      {% for slug, name, count in items %}
+      <li><a href="{% url 'ref_list' slug %}">{{ name|capfirst }}</a><span class="count">{{ count }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

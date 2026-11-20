@@ -1,0 +1,26 @@
+{% load ui %}{% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+<div class="fields">
+  {% for field in form.visible_fields %}
+  {% if field.widget_type == 'checkbox' %}
+  <div class="field checkbox{% if field.errors %} has-error{% endif %}">
+    <label>{{ field }} {{ field.label }}</label>
+    {{ field.errors }}
+  </div>
+  {% elif field.widget_type == 'checkboxselectmultiple' %}
+  <div class="field wide{% if field.field.required %} required{% endif %}{% if field.errors %} has-error{% endif %}">
+    <label>{{ field.label }}</label>
+    {% if field.field.queryset.exists %}<div class="checklist">{{ field }}</div>{% endif %}
+    {% if field.help_text %}{% help_pop_text field.help_text field.auto_id %}{% endif %}
+    {{ field.errors }}
+  </div>
+  {% else %}
+  <div class="field{% if field.field.required %} required{% endif %}{% if field.errors %} has-error{% endif %}{% if field.widget_type == 'textarea' %} wide{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {% if field.help_text %}{% help_pop_text field.help_text field.auto_id %}{% endif %}
+    {% include "core/_related_field.html" with field=field %}
+    {{ field.errors }}
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>

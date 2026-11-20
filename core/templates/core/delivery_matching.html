@@ -1,0 +1,80 @@
+{% extends "core/base.html" %}
+{% block title %}Сопоставление накладных{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{% url 'site_deliveries' site.pk %}">Поставки объекта «{{ site.name }}»</a> /</div>
+<div class="page-head">
+  <div>
+    <h1>Сопоставление строк — {{ site.name }}</h1>
+    <div class="sub">Показаны строки только этого объекта. Выбранное вручную запоминается: в следующий раз такая же строка сопоставится сама.</div>
+  </div>
+  <div class="btn-row">
+    <a class="btn{% if show != 'all' %} btn-primary{% endif %}" href="?show=todo">Требуют решения</a>
+    <a class="btn{% if show == 'all' %} btn-primary{% endif %}" href="?show=all">Все строки</a>
+  </div>
+</div>
+
+<form method="get" class="toolbar">
+  <input type="hidden" name="show" value="{{ show }}">
+  <input type="search" name="q" value="{{ q }}" placeholder="Поиск по строке, материалу, накладной или поставщику">
+  <button class="btn" type="submit">Найти</button>
+  {% if q %}<a href="?show={{ show }}">Сбросить</a>{% endif %}
+</form>
+
+<form method="post" data-dirty-guard>
+  {% csrf_token %}
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Строки</h2>
+      <button class="btn" type="submit" name="action" value="auto" title="Подобрать материал по синонимам и похожим названиям">Подобрать автоматически</button>
+    </div>
+    <div class="rows-wrap">
+    <table class="rows js-sort">
+      <thead><tr><th>Накладная</th><th>Как написано</th><th>Кол-во</th><th>Статус</th><th data-no-sort>Материал из справочника</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+      <tr>
+        <td class="num">№{{ item.delivery_note.number }}<div class="hint">{{ item.delivery_note.delivery_date|date:"d.m.Y" }} · {{ item.delivery_note.supplier }}</div></td>
+        <td>{{ item.original_text }}</td>
+        <td class="num">{{ item.quantity }} {{ item.unit }}</td>
+        <td><span class="status{% if item.matching_status == 'confirmed' %} status-ACCEPTED{% elif item.matching_status == 'auto identified' %} status-PENDING{% else %} status-REJECTED{% endif %}">{{ item.get_matching_status_display }}</span></td>
+        <td>
+          <select name="item_{{ item.pk }}">
+            <option value=""{% if not item.material_id %} selected{% endif %}>—</option>
+            {% for category, mats in material_groups %}
+            <optgroup label="{{ category }}">{% for pk, name in mats %}<option value="{{ pk }}"{% if pk == item.material_id %} selected{% endif %}>{{ name }}</option>{% endfor %}</optgroup>
+            {% endfor %}
+          </select>
+        </td>
+      </tr>
+      {% empty %}
+      <tr class="rows-empty"><td colspan="5">Все строки сопоставлены.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  <div class="sticky-actions">
+    <button class="btn btn-primary" type="submit" name="action" value="save">Подтвердить выбранное</button>
+    <label class="save-toggle" style="margin:0"><input type="checkbox" name="remember" checked> запомнить написание</label>
+  </div>
+</form>
+
+<section class="panel" style="margin-top:16px">
+  <div class="panel-head"><h2>Добавить строки в накладную текстом</h2></div>
+  <p class="hint" style="margin-top:0">По строке на позицию: «название; количество; ед. изм.». Можно скопировать столбцы прямо из Excel.</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="paste">
+    <div class="fields fields-2">
+      <div class="field required"><label>Накладная</label>
+        <select name="note" required>{% for n in notes %}<option value="{{ n.pk }}">№{{ n.number }} от {{ n.delivery_date|date:"d.m.Y" }} — {{ n.supplier }}</option>{% endfor %}</select>
+      </div>
+      <div class="field"><label>&nbsp;</label><a class="hint" href="{% url 'ref_create' 'deliveries' %}?next={{ request.path|urlencode }}">+ новая накладная</a></div>
+      <div class="field wide"><label>Строки</label>
+        <textarea name="lines" rows="5" placeholder="Лист ГКЛ Кнауф 12,5 мм; 120; лист&#10;Профиль ПН 50х40 3м; 60; шт"></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">Добавить строки</button>
+  </form>
+</section>
+{% endblock %}

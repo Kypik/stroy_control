@@ -1,0 +1,39 @@
+{% comment %}
+Таблица строк (накладная → позиции, акт → замеры/материалы/подписанты/приложения).
+«+ Добавить строку» добавляет строку без сохранения страницы, × помечает строку на удаление.
+{% endcomment %}
+{{ fs.management_form }}
+{% if fs.non_form_errors %}<ul class="errorlist">{% for e in fs.non_form_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+<div class="rows-wrap">
+<table class="rows" data-formset="{{ fs.prefix }}">
+  <thead>
+    <tr>
+      {% for field in fs.empty_form.visible_fields %}{% if field.name != 'DELETE' %}<th>{{ field.label }}{% if field.field.create_url %} <a class="related-create" href="{{ field.field.create_url }}?popup=1" data-popup target="_blank" rel="noopener" title="Создать: {{ field.field.create_label }}">+ создать</a>{% endif %}</th>{% endif %}{% endfor %}
+      <th class="del"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in fs.forms %}
+    <tr class="{% if not f.instance.pk %}new-row{% endif %}{% if f.DELETE.value %} removed{% endif %}" data-new="{% if f.instance.pk %}0{% else %}1{% endif %}"{% if f.instance.pk %} data-pk="{{ f.instance.pk }}" id="{{ fs.prefix }}-row-{{ f.instance.pk }}"{% endif %}>
+      {% for field in f.visible_fields %}{% if field.name != 'DELETE' %}
+      <td class="{% if field.errors %}has-error{% endif %}" data-label="{{ field.label }}">
+        {% if forloop.first %}{% for h in f.hidden_fields %}{{ h }}{% endfor %}{% endif %}
+        {{ field }}{{ field.errors }}
+        {% if forloop.first and f.non_field_errors %}<ul class="errorlist">{% for e in f.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </td>
+      {% endif %}{% endfor %}
+      <td class="del">{{ f.DELETE }}<button type="button" class="row-remove" title="{{ delete_label|default:'Удалить строку' }}">×</button></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<template id="row-template-{{ fs.prefix }}">
+  <tr class="new-row" data-new="1">
+    {% for field in fs.empty_form.visible_fields %}{% if field.name != 'DELETE' %}
+    <td data-label="{{ field.label }}">{% if forloop.first %}{% for h in fs.empty_form.hidden_fields %}{{ h }}{% endfor %}{% endif %}{{ field }}</td>
+    {% endif %}{% endfor %}
+    <td class="del">{{ fs.empty_form.DELETE }}<button type="button" class="row-remove" title="{{ delete_label|default:'Удалить строку' }}">×</button></td>
+  </tr>
+</template>
+<button type="button" class="btn row-add" data-add-row="{{ fs.prefix }}">+ Добавить строку</button>

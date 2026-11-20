@@ -1,0 +1,264 @@
+{% extends "core/base.html" %}{% load ui %}
+{% block title %}Проверка — {{ file_name }}{% endblock %}
+{% block content %}
+<div class="crumbs">
+  {% if upload.site %}<a href="{% url 'site_overview' upload.site.pk %}">{{ upload.site.name }}</a> / <a href="{% url 'site_certificates' upload.site.pk %}">Сертификаты объекта</a> / <a href="{% url 'site_cert_uploads' upload.site.pk %}">Загрузка</a> /{% else %}<a href="{% url 'ref_list' 'certificates' %}">Сертификаты</a> / <a href="{% url 'cert_uploads' %}">Загрузка</a> /{% endif %}
+</div>
+<div class="page-head">
+  <div>
+    <h1>Проверка: {{ file_name }}</h1>
+    <div class="sub">Страниц: {{ pages_count }} · документов найдено: {{ cards|length }} ·
+      <a href="{% url 'cert_file' upload.pk %}" target="_blank">открыть исходный файл</a></div>
+  </div>
+  <a class="btn" href="{% url 'ref_create' 'certificates' %}">Ввести вручную</a>
+</div>
+
+{% if upload.site %}
+<div class="notice">Загрузка из пространства объекта «{{ upload.site.name }}» — сохранённые документы будут видны в его сертификатах.</div>
+{% endif %}
+{% if for_material %}
+<div class="notice">Загрузка для материала «<a href="{% url 'ref_edit' 'materials' for_material.pk %}">{{ for_material.name }}</a>» — он уже отмечен в каждом документе.</div>
+{% endif %}
+{% if warnings %}
+<div class="warnings"><strong>Внимание</strong><ul>{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>
+{% endif %}
+{% if all_saved %}
+<div class="all-good">Все документы из файла сохранены. <a href="{% if upload.site %}{% url 'site_cert_uploads' upload.site.pk %}{% else %}{% url 'cert_uploads' %}{% endif %}">Загрузить следующий файл</a></div>
+{% elif cards %}
+<p class="hint">Сверьте поля со сканом слева. {% help_pop "cert.review" %}</p>
+{% else %}
+<div class="blocking"><strong>Документов в файле не найдено</strong>Введите данные вручную.</div>
+{% endif %}
+
+<form method="post" data-dirty-guard>
+  {% csrf_token %}
+  {% for c in cards %}
+  {% with f=c.form %}
+  <section class="panel cert-card{% if c.saved %} is-saved{% endif %}" id="doc-{{ c.index }}">
+    <div class="cert-scan">
+      {% for n in c.pages %}
+      <a href="{% url 'cert_page' upload.pk n %}" target="_blank" title="Открыть страницу {{ n }} крупно">
+        <img src="{% url 'cert_page' upload.pk n %}" alt="Страница {{ n }}" loading="lazy">
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="cert-fields">
+      <div class="cert-head">
+        <h2>Документ {{ forloop.counter }} из {{ cards|length }} <span class="hint">· стр. {{ c.pages|join:", " }}</span></h2>
+        {% if c.saved %}<span class="status status-ACCEPTED">сохранён</span>{% endif %}
+      </div>
+
+      {% if c.saved %}
+        <p>Сохранено в справочник:
+          <a href="{% url 'ref_edit' 'certificates' c.saved.pk %}">{{ c.saved.document_type }} №{{ c.saved.document_number }}</a>
+          {% if c.saved.expiry_date %}(с {{ c.saved.issue_date|date:"d.m.Y" }} по {{ c.saved.expiry_date|date:"d.m.Y" }}){% else %}от {{ c.saved.issue_date|date:"d.m.Y" }}{% endif %}
+          {% if c.saved.manufacturer %}· {{ c.saved.manufacturer }}{% endif %}
+        </p>
+        <p class="hint">Материалы: {% for mc in c.saved.materialcertificate_set.all %}{{ mc.material }}{% if not forloop.last %}; {% endif %}{% empty %}не привязаны — <a href="{% url 'ref_edit' 'certificates' c.saved.pk %}">привязать</a>{% endfor %}</p>
+      {% else %}
+        <label class="save-toggle">{{ f.save_it }} {{ f.save_it.label }}</label>
+        {% if f.save_it.value and f.non_field_errors and not f.quiet %}<div class="blocking small">{{ f.non_field_errors|join:" " }}</div>{% endif %}
+
+        {% with r=c.registry %}
+        {% if r.state == 'found' %}
+        <div class="registry-box {% if r.data.status == 'active' %}reg-ok{% else %}reg-bad{% endif %}">
+          <b>{{ r.data.source_label|default:"ФГИС Росаккредитации" }}: {{ r.data.status_text }}</b>
+          · {% if r.data.registry_record_id %}
+          <a class="btn" href="{{ r.data.url }}" target="_blank" rel="noopener noreferrer">карточка в реестре ↗</a>
+          {% else %}<a href="{{ r.data.url }}" target="_blank" rel="noopener">карточка в реестре ↗</a>{% endif %}
+          <div class="hint">Поля заполнены по реестру. Проверено {{ r.checked_at|slice:":10" }}.</div>
+          {% if r.data.status != 'active' %}<div>Документ не действует — материал с ним не попадёт в акт.</div>{% endif %}
+          {% if r.diffs %}
+          <div class="reg-diffs">На скане прочитано иначе:
+            <ul>{% for label, scan, reg in r.diffs %}<li>{{ label }}: скан «{{ scan }}» → реестр «{{ reg }}»</li>{% endfor %}</ul>
+          </div>
+          {% endif %}
+        </div>
+        {% elif r.state == 'not_found' %}
+        <div class="registry-box reg-bad">
+          <b>В реестрах не найден.</b> Проверьте номер по скану, исправьте и нажмите «Проверить в реестре».
+          Если номер верный, а документа в реестрах нет, это повод уточнить у поставщика.
+        </div>
+        {% elif r.state == 'ambiguous' %}
+        <div class="registry-box reg-bad"><b>Нужно уточнить документ.</b><div class="hint">{{ r.message }}</div></div>
+        {% elif r.state == 'candidates' %}
+        <div class="registry-box reg-off">
+          <b>{{ r.message }}</b>
+          {% for candidate in r.candidates %}
+          <div style="margin-top:10px">
+            <button class="btn" type="submit" name="registry_choose" value="{{ c.index }}:{{ forloop.counter0 }}" formnovalidate>{{ candidate.number }}</button>
+            <div class="hint">{{ candidate.source_label|default:"ФГИС Росаккредитации" }} · {{ candidate.status_text }} · {{ candidate.issue_date }}{% if candidate.expiry_date %} — {{ candidate.expiry_date }}{% endif %}{% if candidate.product %} · {{ candidate.product }}{% endif %}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% elif r.state == 'unavailable' %}
+        <div class="registry-box reg-off">
+          <b>Источники недоступны</b> — данные взяты со скана, сверьте их внимательно.
+          <div class="hint">{{ r.message }}</div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if c.existing %}
+        <div class="notice">Документ с таким номером уже есть:
+          <a href="{% url 'ref_edit' 'certificates' c.existing.pk %}" target="_blank">{{ c.existing }}</a>{% if c.existing.product_text %} ({{ c.existing.product_text|truncatechars:80 }}){% endif %}.
+          При сохранении запись обновится, отмеченные материалы добавятся к ней.</div>
+        {% endif %}
+        {% if c.doc.warnings %}
+        <div class="warnings small"><ul>{% for w in c.doc.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>
+        {% endif %}
+
+        <div class="card-body">
+          <div class="fields fields-2">
+            {% include "core/_card_field.html" with field=f.document_type %}
+            {% include "core/_card_field.html" with field=f.document_number warn=c.doc.number_confidence %}
+            {% include "core/_card_field.html" with field=f.issue_date %}
+            {% include "core/_card_field.html" with field=f.expiry_date %}
+            {% include "core/_card_field.html" with field=f.manufacturer wide=1 %}
+          </div>
+          <div class="new-org fields fields-2"{% if f.manufacturer.value != 'new' %} hidden{% endif %}>
+            {% include "core/_card_field.html" with field=f.new_short_name %}
+            {% include "core/_card_field.html" with field=f.new_inn %}
+            {% include "core/_card_field.html" with field=f.new_full_name wide=1 %}
+            {% include "core/_card_field.html" with field=f.new_ogrn %}
+            {% include "core/_card_field.html" with field=f.new_address %}
+          </div>
+          <details class="form-group"{% if f.product_text.errors or f.pages.errors %} open{% endif %}>
+            <summary>Продукция и страницы{% if f.product_text.value %} — {{ f.product_text.value|truncatechars:70 }}{% endif %}</summary>
+            <div class="fields fields-2">
+              {% include "core/_card_field.html" with field=f.product_text wide=1 %}
+              {% include "core/_card_field.html" with field=f.pages %}
+            </div>
+          </details>
+          {{ f.registry_url }}{{ f.registry_record_id }}{{ f.check_url }}{{ f.issuer }}
+
+          <div class="links">
+            {% if c.can_check_registry %}<button class="btn" type="submit" name="registry_check" value="{{ c.index }}" title="Найти номер из поля «Номер» в реестре и заполнить поля по нему">Проверить в реестре</button>{% endif %}
+            {% if c.doc.registry_url %}<a href="{{ c.doc.registry_url }}" target="_blank" rel="noopener">Запись в реестре Росаккредитации ↗</a>{% endif %}
+            {% if c.doc.check_url %}<a href="{{ c.doc.check_url }}" target="_blank" rel="noopener">Проверка на сайте органа ↗</a>{% endif %}
+            {% if not c.doc.registry_url and c.fsa_search %}<a href="{{ c.fsa_search }}" target="_blank" rel="noopener">Найти в реестре Росаккредитации ↗</a>{% endif %}
+            {% if c.doc.voluntary %}<span class="hint">Добровольная сертификация — в реестре Росаккредитации её нет.</span>{% endif %}
+          </div>
+
+          <div class="cm-head">
+            <h2>Материалы</h2>
+            <a class="hint" href="{% url 'ref_create' 'materials' %}?popup=1" data-popup target="_blank" rel="noopener">+ материал</a>
+          </div>
+          {% if f.materials.errors and f.save_it.value %}{{ f.materials.errors }}{% endif %}
+          {% include "core/_cert_materials.html" with upload=upload index=c.index prefix=c.materials_html_ctx.prefix suggestions=c.materials_html_ctx.suggestions groups=c.materials_html_ctx.groups checked=c.materials_html_ctx.checked %}
+
+          <div class="new-material">
+            <label class="save-toggle">{{ f.new_material }} {{ f.new_material.label }}</label>
+            <div class="fields fields-2 new-material-fields"{% if not f.new_material.value %} hidden{% endif %}>
+              {% include "core/_card_field.html" with field=f.new_material_name wide=1 %}
+              {% include "core/_card_field.html" with field=f.new_material_category %}
+              {% include "core/_card_field.html" with field=f.new_material_unit %}
+            </div>
+            <div class="hint new-material-fields"{% if not f.new_material.value %} hidden{% endif %}>Названия подставлены {% if c.registry.state == 'found' %}из реестра{% else %}из поля «Продукция»{% endif %} — исправьте так, как материалы пишут в актах. Если документ на несколько материалов — каждый с новой строки. Изготовитель и ГОСТ возьмутся из документа.</div>
+          </div>
+
+          <details class="raw-text"><summary>Распознанный текст</summary><pre>{{ c.doc.text }}</pre></details>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endwith %}
+  {% endfor %}
+
+  <div class="sticky-actions">
+    {% if unsaved %}<button class="btn btn-primary" type="submit">Сохранить отмеченные</button>{% endif %}
+    <a class="btn" href="{% if upload.site %}{% url 'site_cert_uploads' upload.site.pk %}{% else %}{% url 'cert_uploads' %}{% endif %}">К загрузкам</a>
+    <a class="btn" href="{% if upload.site %}{% url 'site_certificates' upload.site.pk %}{% else %}{% url 'ref_list' 'certificates' %}{% endif %}">К сертификатам</a>
+  </div>
+  <datalist id="material-categories">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist>
+</form>
+
+<script>
+(function () {
+  // «+ Добавить в справочник» у изготовителя — показываем поля нового контрагента
+  document.querySelectorAll('.cert-card').forEach(function (card) {
+    var sel = card.querySelector('select[name$="-manufacturer"]');
+    var box = card.querySelector('.new-org');
+    if (!sel || !box) return;
+    sel.addEventListener('change', function () { box.hidden = sel.value !== 'new'; });
+  });
+
+  // «Создать новый материал» — показываем поля
+  document.querySelectorAll('.cert-card').forEach(function (card) {
+    var cb = card.querySelector('input[name$="-new_material"]');
+    if (!cb) return;
+    cb.addEventListener('change', function () {
+      card.querySelectorAll('.new-material-fields').forEach(function (el) { el.hidden = !cb.checked; });
+      if (cb.checked) card.querySelector('input[name$="-new_material_name"]').focus();
+    });
+  });
+
+  // Enter в поле не должен нажимать первую кнопку формы («Проверить в реестре»)
+  document.querySelector('form[data-dirty-guard]').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.preventDefault();
+  });
+
+  // снятая галочка «Сохранить» — карточка бледнеет
+  function syncSave(card) {
+    var cb = card.querySelector('input[name$="-save_it"]');
+    if (cb) card.classList.toggle('skipped', !cb.checked);
+  }
+  document.querySelectorAll('.cert-card').forEach(function (card) {
+    syncSave(card);
+    var cb = card.querySelector('input[name$="-save_it"]');
+    if (cb) cb.addEventListener('change', function () { syncSave(card); });
+  });
+
+  // материал может быть и в подсказках, и в общем списке — галочки держим одинаковыми
+  document.addEventListener('change', function (e) {
+    var box = e.target;
+    if (!box.matches('.cm-block input[type=checkbox]')) return;
+    box.closest('.cm-block').querySelectorAll('input[type=checkbox][value="' + box.value + '"]')
+      .forEach(function (other) { other.checked = box.checked; });
+  });
+
+  // поиск по материалам
+  document.addEventListener('input', function (e) {
+    if (!e.target.matches('.cm-search')) return;
+    var q = e.target.value.trim().toLowerCase();
+    var block = e.target.closest('.cm-all');
+    block.querySelectorAll('.cm-group').forEach(function (g) {
+      var visible = 0;
+      g.querySelectorAll('.cm-item').forEach(function (it) {
+        var show = !q || it.getAttribute('data-name').indexOf(q) !== -1;
+        it.hidden = !show; if (show) visible++;
+      });
+      g.hidden = visible === 0;
+    });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.matches('.cm-search') && e.key === 'Enter') e.preventDefault();
+  });
+
+  // добавили материал в отдельном окне — обновляем списки, отметки сохраняем
+  if ('BroadcastChannel' in window) {
+    new BroadcastChannel('stroy-ref').addEventListener('message', function (msg) {
+      document.querySelectorAll('.cm-block').forEach(function (block) {
+        var card = block.closest('.cert-card');
+        var params = new URLSearchParams();
+        block.querySelectorAll('input[type=checkbox]:checked').forEach(function (b) { params.append('checked', b.value); });
+        var man = card.querySelector('select[name$="-manufacturer"]');
+        if (man) params.append('manufacturer', man.value);
+        var wasOpen = block.querySelector('.cm-all').open;
+        fetch(block.getAttribute('data-url') + '?' + params.toString(), { credentials: 'same-origin' })
+          .then(function (r) { return r.text(); })
+          .then(function (html) {
+            var holder = document.createElement('div');
+            holder.innerHTML = html;
+            var fresh = holder.firstElementChild;
+            fresh.querySelector('.cm-all').open = wasOpen;
+            block.replaceWith(fresh);
+          });
+      });
+      window.stroyToast('Добавлено: ' + (msg.data && msg.data.label ? msg.data.label : 'материал') + '. Списки обновлены.');
+    });
+  }
+})();
+</script>
+{% endblock %}

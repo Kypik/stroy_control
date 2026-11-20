@@ -1,0 +1,6 @@
+{% comment %}Точный предпросмотр: страницы настоящего файла акта (Excel → PDF → PNG).{% endcomment %}
+{% for p in pages %}
+<a href="{% url 'act_preview_file' act_id key p %}" target="_blank" title="Открыть страницу в полном размере">
+  <img class="pv-page" src="{% url 'act_preview_file' act_id key p %}" alt="Страница {{ forloop.counter }}">
+</a>
+{% empty %}<p class="hint">Нечего показать.</p>{% endfor %}

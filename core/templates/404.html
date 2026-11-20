@@ -1,0 +1,15 @@
+{% extends "core/base.html" %}
+{% block title %}Страница не найдена{% endblock %}
+{% block content %}
+<div class="panel" style="text-align:center; padding:48px 18px">
+  <div style="font-size:48px; font-weight:600; color:var(--muted); line-height:1">404</div>
+  <h1 style="margin:10px 0 6px">Страница не найдена</h1>
+  <p class="hint">Такой страницы нет или она была удалена. Проверьте адрес{% if request %} — <code>{{ request.path }}</code>{% endif %}.</p>
+  <div class="btn-row" style="justify-content:center; margin-top:18px">
+    <a class="btn btn-primary" href="{% url 'home' %}">На главную</a>
+    {% if current_site %}<a class="btn" href="{% url 'site_acts' current_site.pk %}">Акты объекта</a>{% endif %}
+    <a class="btn" href="{% url 'ref_index' %}">Справочники</a>
+    {% if current_site %}<a class="btn" href="{% url 'site_journal' current_site.pk %}">Журнал ВК</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

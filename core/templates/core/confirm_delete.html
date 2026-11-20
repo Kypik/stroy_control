@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+{% block title %}Удаление{% endblock %}
+{% block content %}
+<form method="post" class="panel" style="max-width:560px">
+  {% csrf_token %}
+  <h1 style="margin-bottom:8px">{{ title }}</h1>
+  <p>{{ details }}</p>
+  <p class="hint">Действие нельзя отменить.</p>
+  <div class="btn-row">
+    <button class="btn btn-danger" type="submit">Удалить</button>
+    <a class="btn" href="{{ cancel_url }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}
